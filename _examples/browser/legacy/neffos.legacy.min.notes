@@ -1,0 +1,5 @@
+// NOTE: the `neffos.legacy.min.js` is a minified to es5 but fixed by hand, and it won't be automatically available to end-users.
+//
+// In order this to work we have to somehow: remove exports and if there were variables then replace with "var" or "const" and put semicolons when nessecary, it tested and worked
+// but I couldn't find any plugin to do it automatically, so we omit this process until someone really wants and asks for it.
+// See .babelrc's scripts tag comments.

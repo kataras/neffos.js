@@ -1,0 +1,49 @@
+{
+    "name": "neffos.js",
+    "version": "0.1.0",
+    "description": "javascript client for the modern neffos websocket framework",
+    "keywords": [
+        "realtime",
+        "framework",
+        "websocket",
+        "events",
+        "iris",
+        "neffos"
+    ],
+    "scripts": {
+        "toJS": "tsc --target es6 -module commonjs --sourceMap --declaration --declarationDir ./type_definitions --outDir ./dist ./src/neffos.ts",
+        "minifyES6": "minify ./dist/neffos.js --outFile ./dist/neffos.min.js",
+        "build": "npm run-script toJS && npm run-script minifyES6"
+    },
+    "types": "type_definitions/neffos.d.ts",
+    "main": "./dist/neffos.min.js",
+    "files": [
+        "LICENSE",
+        "README.md",
+        "dist/",
+        "type_definitions/"
+    ],
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "git://github.com/kataras/neffos.js"
+    },
+    "bugs": {
+        "url": "https://github.com/kataras/neffos.js/issues"
+    },
+    "author": "Gerasimos Maropoulos (@kataras)",
+    "contributors": [
+        {
+            "name": "Gerasimos Maropoulos (@kataras)",
+            "email": "kataras2006@hotmail.com"
+        }
+    ],
+    "devDependencies": {
+        "@types/node": "^12.0.2",
+        "babel-minify": "^0.5.0",
+        "typescript": "^3.4.5"
+    },
+    "dependencies": {
+        "ws": "^7.0.0"
+    }
+}

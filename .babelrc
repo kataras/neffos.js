@@ -1,0 +1,38 @@
+{
+  "presets": [
+    [
+      "@babel/preset-env"
+    ]
+  ]
+}
+// {
+//   "plugins": [
+//     [
+//       "@babel/plugin-transform-runtime",
+//       {
+//         "absoluteRuntime": false,
+//         "corejs": false,
+//         "helpers": true,
+//         "regenerator": true,
+//         "useESModules": false
+//       }
+//     ]
+//   ]
+// } babel --plugins @babel/plugin-transform-runtime ...
+//
+// {
+//   "plugins": [
+//     ["transform-es2015-modules-commonjs", {
+//       "allowTopLevelThis": true
+//     }]
+//   ]
+// }
+//
+//
+// "scripts": {
+//  "toJS": "tsc --target es6 -module commonjs --sourceMap --declaration --declarationDir ./type_definitions --outDir ./dist ./src/neffos.ts",
+//  "toBrowser": "browserify ./dist/neffos.js -o ./dist/neffos.browserify.js",
+//  "toES5": "babel --plugins transform-es2015-modules-commonjs ./dist/neffos.js --out-file ./dist/neffos.legacy.min.js",
+//  "minify": "uglifyjs ./dist/neffos.legacy.min.js --compress  --output ./dist/neffos.legacy.min.js",
+//  "build": "npm run-script toJS && npm run-script toES5 && npm run-script minify"
+// },
