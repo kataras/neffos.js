@@ -36,7 +36,7 @@ const ackNotOKBinary = 'H'; // comes from server to client if `Server#OnConnecte
 const waitIsConfirmationPrefix = '#';
 const waitComesFromClientPrefix = '$';
 
-export function IsSystemEvent(event: string): boolean {
+export function isSystemEvent(event: string): boolean {
     switch (event) {
         case OnNamespaceConnect:
         case OnNamespaceConnected:
@@ -236,16 +236,16 @@ export class Room {
         this.name = roomName;
     }
 
-    Emit(event: string, body: WSData): boolean {
+    emit(event: string, body: WSData): boolean {
         let msg = new Message();
         msg.Namespace = this.nsConn.namespace;
         msg.Room = this.name;
         msg.Event = event;
         msg.Body = body;
-        return this.nsConn.conn.Write(msg);
+        return this.nsConn.conn.write(msg);
     }
 
-    Leave(): Promise<Error> {
+    leave(): Promise<Error> {
         let msg = new Message();
         msg.Namespace = this.nsConn.namespace;
         msg.Room = this.name;
@@ -267,39 +267,39 @@ export class NSConn {
         this.rooms = new Map<string, Room>();
     }
 
-    Emit(event: string, body: WSData): boolean {
+    emit(event: string, body: WSData): boolean {
         let msg = new Message();
         msg.Namespace = this.namespace;
         msg.Event = event;
         msg.Body = body;
-        return this.conn.Write(msg);
+        return this.conn.write(msg);
     }
 
-    Ask(event: string, body: WSData): Promise<Message | Error> {
+    ask(event: string, body: WSData): Promise<Message | Error> {
         let msg = new Message();
         msg.Namespace = this.namespace;
         msg.Event = event;
         msg.Body = body;
-        return this.conn.Ask(msg);
+        return this.conn.ask(msg);
     }
 
-    JoinRoom(roomName: string): Promise<Room | Error> {
+    joinRoom(roomName: string): Promise<Room | Error> {
         return this.askRoomJoin(roomName);
     }
 
-    Room(roomName: string): Room {
+    room(roomName: string): Room {
         return this.rooms.get(roomName);
     }
 
-    Rooms(): Room[] {
-        let rooms = new Array<Room>(this.rooms.size);
-        this.rooms.forEach((room) => {
-            rooms.push(room);
-        })
-        return rooms;
-    }
+    // Rooms(): Room[] {
+    //     let rooms = new Array<Room>(this.rooms.size);
+    //     this.rooms.forEach((room) => {
+    //         rooms.push(room);
+    //     })
+    //     return rooms;
+    // }
 
-    async LeaveAll(): Promise<Error> {
+    async leaveAll(): Promise<Error> {
         let leaveMsg = new Message();
         leaveMsg.Namespace = this.namespace;
         leaveMsg.Event = OnRoomLeft;
@@ -337,7 +337,7 @@ export class NSConn {
         });
     }
 
-    Disconnect(): Promise<Error> {
+    disconnect(): Promise<Error> {
         let disconnectMsg = new Message();
         disconnectMsg.Namespace = this.namespace;
         disconnectMsg.Event = OnNamespaceDisconnect;
@@ -358,7 +358,7 @@ export class NSConn {
         joinMsg.IsLocal = true;
 
         try {
-            await this.conn.Ask(joinMsg);
+            await this.conn.ask(joinMsg);
         } catch (err) {
             return err;
         }
@@ -382,7 +382,7 @@ export class NSConn {
         }
 
         try {
-            await this.conn.Ask(msg)
+            await this.conn.ask(msg)
         } catch (err) {
             return err;
         }
@@ -408,7 +408,7 @@ export class NSConn {
             let err = fireEvent(this, msg);
             if (!isEmpty(err)) {
                 msg.Err = err.message;
-                this.conn.Write(msg);
+                this.conn.write(msg);
                 return;
             }
 
@@ -484,7 +484,7 @@ export const ErrWrite = new Error("write closed");
 
 type waitingMessageFunc = (msg: Message) => void;
 
-export function Dial(endpoint: string, connHandler: Namespaces, protocols?: string[]): Promise<Conn> {
+export function dial(endpoint: string, connHandler: Namespaces, protocols?: string[]): Promise<Conn> {
     if (endpoint.indexOf("ws") == -1) {
         endpoint = "ws://" + endpoint;
     }
@@ -509,7 +509,7 @@ export function Dial(endpoint: string, connHandler: Namespaces, protocols?: stri
                 return;
             }
 
-            if (conn.IsAcknowledged()) {
+            if (conn.isAcknowledged()) {
                 resolve(conn);
             }
         });
@@ -520,7 +520,7 @@ export function Dial(endpoint: string, connHandler: Namespaces, protocols?: stri
             ws.send(ackBinary);
         });
         ws.onerror = ((err: Event) => {
-            conn.Close();
+            conn.close();
             reject(err);
         });
     });
@@ -529,7 +529,7 @@ export function Dial(endpoint: string, connHandler: Namespaces, protocols?: stri
 export class Conn {
     private conn: WebSocket;
 
-    private isAcknowledged: boolean;
+    private _isAcknowledged: boolean;
     private allowNativeMessages: boolean; // TODO: when events done fill it on constructor.
 
     ID: string;
@@ -543,7 +543,7 @@ export class Conn {
 
     constructor(conn: WebSocket, connHandler: Namespaces, protocols?: string[]) {
         this.conn = conn;
-        this.isAcknowledged = false;
+        this._isAcknowledged = false;
         let hasEmptyNS = connHandler.hasOwnProperty("");
         this.allowNativeMessages = hasEmptyNS && connHandler[""].hasOwnProperty(OnNativeMessage);
         this.queue = new Array<string>();
@@ -554,22 +554,22 @@ export class Conn {
         this.closed = false;
 
         this.conn.onclose = ((evt: Event): any => {
-            this.Close();
+            this.close();
             return null;
         });
     }
 
-    IsAcknowledged(): boolean {
-        return this.isAcknowledged;
+    isAcknowledged(): boolean {
+        return this._isAcknowledged;
     }
 
     handle(evt: MessageEvent): Error {
-        if (!this.isAcknowledged) {
+        if (!this._isAcknowledged) {
             // if (evt.data instanceof ArrayBuffer) {
             // new Uint8Array(evt.data)
             let err = this.handleAck(evt.data);
             if (err == undefined) {
-                this.isAcknowledged = true
+                this._isAcknowledged = true
                 this.handleQueue();
             } else {
                 this.conn.close();
@@ -616,7 +616,7 @@ export class Conn {
         }
 
         if (msg.IsNative && this.allowNativeMessages) {
-            let ns = this.Namespace("")
+            let ns = this.namespace("")
             return fireEvent(ns, msg);
         }
 
@@ -628,7 +628,7 @@ export class Conn {
             }
         }
 
-        const ns = this.Namespace(msg.Namespace);
+        const ns = this.namespace(msg.Namespace);
 
         switch (msg.Event) {
             case OnNamespaceConnect:
@@ -657,7 +657,7 @@ export class Conn {
                 if (!isEmpty(err)) {
                     // write any error back to the server.
                     msg.Err = err.message;
-                    this.Write(msg);
+                    this.write(msg);
                     return err;
                 }
         }
@@ -665,11 +665,11 @@ export class Conn {
         return null;
     }
 
-    Connect(namespace: string): Promise<NSConn | Error> {
+    connect(namespace: string): Promise<NSConn | Error> {
         return this.askConnect(namespace);
     }
 
-    Namespace(namespace: string): NSConn {
+    namespace(namespace: string): NSConn {
         return this.connectedNamespaces.get(namespace)
     }
 
@@ -678,7 +678,7 @@ export class Conn {
             return;
         }
 
-        let ns = this.Namespace(msg.Namespace);
+        let ns = this.namespace(msg.Namespace);
         if (ns !== undefined) {
             this.writeEmptyReply(msg.wait);
             return;
@@ -687,7 +687,7 @@ export class Conn {
         let events = getEvents(this.namespaces, msg.Namespace)
         if (events === undefined) {
             msg.Err = ErrBadNamespace.message;
-            this.Write(msg);
+            this.write(msg);
             return;
         }
 
@@ -705,7 +705,7 @@ export class Conn {
             return;
         }
 
-        let ns = this.Namespace(msg.Namespace);
+        let ns = this.namespace(msg.Namespace);
         if (ns === undefined) {
             this.writeEmptyReply(msg.wait);
             return;
@@ -720,9 +720,9 @@ export class Conn {
         fireEvent(ns, msg);
     }
 
-    Ask(msg: Message): Promise<Message | Error> {
+    ask(msg: Message): Promise<Message | Error> {
         return new Promise((resolve, reject) => {
-            if (this.IsClosed()) {
+            if (this.isClosed()) {
                 reject(ErrClosed);
                 return;
             }
@@ -738,7 +738,7 @@ export class Conn {
                 resolve(receive);
             }));
 
-            if (!this.Write(msg)) {
+            if (!this.write(msg)) {
                 reject(ErrWrite);
                 return;
             }
@@ -757,7 +757,7 @@ export class Conn {
     // }
 
     private async askConnect(namespace: string): Promise<NSConn | Error> {
-        let ns = this.Namespace(namespace);
+        let ns = this.namespace(namespace);
         if (ns !== undefined) { // it's already connected.
             return ns;
         }
@@ -781,7 +781,7 @@ export class Conn {
         }
 
         try {
-            await this.Ask(connectMessage);
+            await this.ask(connectMessage);
         } catch (err) {
             return err;
         }
@@ -797,13 +797,13 @@ export class Conn {
     }
 
     async askDisconnect(msg: Message): Promise<Error> {
-        let ns = this.Namespace(msg.Namespace);
+        let ns = this.namespace(msg.Namespace);
         if (ns === undefined) { // it's already connected.
             return ErrBadNamespace;
         }
 
         try {
-            await this.Ask(msg);
+            await this.ask(msg);
         } catch (err) {
             return err
         }
@@ -816,18 +816,18 @@ export class Conn {
         return fireEvent(ns, msg);
     }
 
-    IsClosed(): boolean {
+    isClosed(): boolean {
         return this.closed || this.conn.readyState == this.conn.CLOSED || false;
     }
 
-    Write(msg: Message): boolean {
-        if (this.IsClosed()) {
+    write(msg: Message): boolean {
+        if (this.isClosed()) {
             return false;
         }
 
         if (!msg.isConnect() && !msg.isDisconnect()) {
             // namespace pre-write check.
-            let ns = this.Namespace(msg.Namespace);
+            let ns = this.namespace(msg.Namespace);
 
             if (ns === undefined) {
                 return false;
@@ -842,20 +842,16 @@ export class Conn {
             }
         }
 
-        this.write(serializeMessage(msg));
+        this.conn.send(serializeMessage(msg));
 
         return true;
     }
 
-    private write(data: any) {
-        this.conn.send(data)
-    }
-
     writeEmptyReply(wait: string): void {
-        this.write(genEmptyReplyToWait(wait));
+        this.conn.send(genEmptyReplyToWait(wait));
     }
 
-    Close(): void {
+    close(): void {
         if (this.closed) {
             return;
         }

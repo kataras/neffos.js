@@ -3,6 +3,6 @@
     "version": "0.0.1",
     "main": "node_client.js",
     "dependencies": {
-        "neffos": "^0.1.0"
+        "neffos": "latest"
     }
 }

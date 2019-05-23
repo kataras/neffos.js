@@ -9,7 +9,7 @@ var wsURL = scheme + "://" + document.location.hostname + port + "/echo";
 var outputTxt = document.getElementById("output");
 
 async function runExample() {
-  let conn = await neffos.Dial(wsURL, {
+  let conn = await neffos.dial(wsURL, {
     default: {
       _OnNamespaceConnected: function (ns, msg) {
         addMessage("connected to namespace: " + msg.Namespace);
@@ -35,7 +35,7 @@ async function runExample() {
   });
 
   try {
-    let nsConn = await conn.Connect("default");
+    let nsConn = await conn.connect("default");
     let joinedRoom = "";
     let exampleRoomName = "room1";
 
@@ -49,20 +49,20 @@ async function runExample() {
 
       switch (input) {
         case "join":
-          nsConn.JoinRoom(exampleRoomName);
+          nsConn.joinRoom(exampleRoomName);
           joinedRoom = exampleRoomName;
           break;
         case "leave":
           if (joinedRoom.length > 0) {
-            nsConn.Room(exampleRoomName).Leave();
+            nsConn.room(exampleRoomName).leave();
             joinedRoom = "";
           }
           break;
         default:
           if (joinedRoom.length > 0) {
-            nsConn.Room(exampleRoomName).Emit("chat", input);
+            nsConn.room(exampleRoomName).emit("chat", input);
           } else {
-            nsConn.Emit("chat", input);
+            nsConn.emit("chat", input);
           }
 
           addMessage("Me: " + input);
@@ -75,7 +75,7 @@ async function runExample() {
 
 runExample();
 // OR:
-// neffos.Dial(wsURL, {
+// neffos.dial(wsURL, {
 //   default: {
 //     _OnNamespaceConnected: function(c, msg) {
 //       console.info("connected to ", msg.Namespace);
@@ -89,7 +89,7 @@ runExample();
 //   }
 // })
 //   .then(function(conn) {
-//     let nsConn = conn.Connect("default");
+//     let nsConn = conn.connect("default");
 //     [...]
 //   })
 //   .catch(function(err) {

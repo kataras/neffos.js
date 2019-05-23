@@ -37,7 +37,7 @@ const ackIDBinary = 'A'; // comes from server to client after ackBinary and read
 const ackNotOKBinary = 'H'; // comes from server to client if `Server#OnConnected` errored as a prefix, the rest message is the error text.
 const waitIsConfirmationPrefix = '#';
 const waitComesFromClientPrefix = '$';
-function IsSystemEvent(event) {
+function isSystemEvent(event) {
     switch (event) {
         case exports.OnNamespaceConnect:
         case exports.OnNamespaceConnected:
@@ -51,7 +51,7 @@ function IsSystemEvent(event) {
             return false;
     }
 }
-exports.IsSystemEvent = IsSystemEvent;
+exports.isSystemEvent = isSystemEvent;
 function isEmpty(s) {
     if (s === undefined) {
         return true;
@@ -189,15 +189,15 @@ class Room {
         this.nsConn = ns;
         this.name = roomName;
     }
-    Emit(event, body) {
+    emit(event, body) {
         let msg = new Message();
         msg.Namespace = this.nsConn.namespace;
         msg.Room = this.name;
         msg.Event = event;
         msg.Body = body;
-        return this.nsConn.conn.Write(msg);
+        return this.nsConn.conn.write(msg);
     }
-    Leave() {
+    leave() {
         let msg = new Message();
         msg.Namespace = this.nsConn.namespace;
         msg.Room = this.name;
@@ -213,34 +213,34 @@ class NSConn {
         this.events = events;
         this.rooms = new Map();
     }
-    Emit(event, body) {
+    emit(event, body) {
         let msg = new Message();
         msg.Namespace = this.namespace;
         msg.Event = event;
         msg.Body = body;
-        return this.conn.Write(msg);
+        return this.conn.write(msg);
     }
-    Ask(event, body) {
+    ask(event, body) {
         let msg = new Message();
         msg.Namespace = this.namespace;
         msg.Event = event;
         msg.Body = body;
-        return this.conn.Ask(msg);
+        return this.conn.ask(msg);
     }
-    JoinRoom(roomName) {
+    joinRoom(roomName) {
         return this.askRoomJoin(roomName);
     }
-    Room(roomName) {
+    room(roomName) {
         return this.rooms.get(roomName);
     }
-    Rooms() {
-        let rooms = new Array(this.rooms.size);
-        this.rooms.forEach((room) => {
-            rooms.push(room);
-        });
-        return rooms;
-    }
-    LeaveAll() {
+    // Rooms(): Room[] {
+    //     let rooms = new Array<Room>(this.rooms.size);
+    //     this.rooms.forEach((room) => {
+    //         rooms.push(room);
+    //     })
+    //     return rooms;
+    // }
+    leaveAll() {
         return __awaiter(this, void 0, void 0, function* () {
             let leaveMsg = new Message();
             leaveMsg.Namespace = this.namespace;
@@ -273,7 +273,7 @@ class NSConn {
             leaveMsg.Event = exports.OnRoomLeave;
         });
     }
-    Disconnect() {
+    disconnect() {
         let disconnectMsg = new Message();
         disconnectMsg.Namespace = this.namespace;
         disconnectMsg.Event = exports.OnNamespaceDisconnect;
@@ -291,7 +291,7 @@ class NSConn {
             joinMsg.Event = exports.OnRoomJoin;
             joinMsg.IsLocal = true;
             try {
-                yield this.conn.Ask(joinMsg);
+                yield this.conn.ask(joinMsg);
             }
             catch (err) {
                 return err;
@@ -313,7 +313,7 @@ class NSConn {
                 return exports.ErrBadRoom;
             }
             try {
-                yield this.conn.Ask(msg);
+                yield this.conn.ask(msg);
             }
             catch (err) {
                 return err;
@@ -336,7 +336,7 @@ class NSConn {
             let err = fireEvent(this, msg);
             if (!isEmpty(err)) {
                 msg.Err = err.message;
-                this.conn.Write(msg);
+                this.conn.write(msg);
                 return;
             }
             this.rooms.set(msg.Room, new Room(this, msg.Room));
@@ -381,7 +381,7 @@ exports.ErrBadNamespace = new Error("bad namespace");
 exports.ErrBadRoom = new Error("bad room");
 exports.ErrClosed = new Error("use of closed connection");
 exports.ErrWrite = new Error("write closed");
-function Dial(endpoint, connHandler, protocols) {
+function dial(endpoint, connHandler, protocols) {
     if (endpoint.indexOf("ws") == -1) {
         endpoint = "ws://" + endpoint;
     }
@@ -401,7 +401,7 @@ function Dial(endpoint, connHandler, protocols) {
                 reject(err);
                 return;
             }
-            if (conn.IsAcknowledged()) {
+            if (conn.isAcknowledged()) {
                 resolve(conn);
             }
         });
@@ -412,17 +412,17 @@ function Dial(endpoint, connHandler, protocols) {
             ws.send(ackBinary);
         });
         ws.onerror = ((err) => {
-            conn.Close();
+            conn.close();
             reject(err);
         });
     });
 }
-exports.Dial = Dial;
+exports.dial = dial;
 class Conn {
     // private isConnectingProcesseses: string[]; // if elem exists then any receive of that namespace is locked until `askConnect` finished.
     constructor(conn, connHandler, protocols) {
         this.conn = conn;
-        this.isAcknowledged = false;
+        this._isAcknowledged = false;
         let hasEmptyNS = connHandler.hasOwnProperty("");
         this.allowNativeMessages = hasEmptyNS && connHandler[""].hasOwnProperty(exports.OnNativeMessage);
         this.queue = new Array();
@@ -432,20 +432,20 @@ class Conn {
         // this.isConnectingProcesseses = new Array<string>();
         this.closed = false;
         this.conn.onclose = ((evt) => {
-            this.Close();
+            this.close();
             return null;
         });
     }
-    IsAcknowledged() {
-        return this.isAcknowledged;
+    isAcknowledged() {
+        return this._isAcknowledged;
     }
     handle(evt) {
-        if (!this.isAcknowledged) {
+        if (!this._isAcknowledged) {
             // if (evt.data instanceof ArrayBuffer) {
             // new Uint8Array(evt.data)
             let err = this.handleAck(evt.data);
             if (err == undefined) {
-                this.isAcknowledged = true;
+                this._isAcknowledged = true;
                 this.handleQueue();
             }
             else {
@@ -487,7 +487,7 @@ class Conn {
             return exports.ErrInvalidPayload;
         }
         if (msg.IsNative && this.allowNativeMessages) {
-            let ns = this.Namespace("");
+            let ns = this.namespace("");
             return fireEvent(ns, msg);
         }
         if (msg.isWait()) {
@@ -497,7 +497,7 @@ class Conn {
                 return;
             }
         }
-        const ns = this.Namespace(msg.Namespace);
+        const ns = this.namespace(msg.Namespace);
         switch (msg.Event) {
             case exports.OnNamespaceConnect:
                 this.replyConnect(msg);
@@ -525,23 +525,23 @@ class Conn {
                 if (!isEmpty(err)) {
                     // write any error back to the server.
                     msg.Err = err.message;
-                    this.Write(msg);
+                    this.write(msg);
                     return err;
                 }
         }
         return null;
     }
-    Connect(namespace) {
+    connect(namespace) {
         return this.askConnect(namespace);
     }
-    Namespace(namespace) {
+    namespace(namespace) {
         return this.connectedNamespaces.get(namespace);
     }
     replyConnect(msg) {
         if (isEmpty(msg.wait) || msg.isNoOp) {
             return;
         }
-        let ns = this.Namespace(msg.Namespace);
+        let ns = this.namespace(msg.Namespace);
         if (ns !== undefined) {
             this.writeEmptyReply(msg.wait);
             return;
@@ -549,7 +549,7 @@ class Conn {
         let events = getEvents(this.namespaces, msg.Namespace);
         if (events === undefined) {
             msg.Err = exports.ErrBadNamespace.message;
-            this.Write(msg);
+            this.write(msg);
             return;
         }
         ns = new NSConn(this, msg.Namespace, events);
@@ -562,7 +562,7 @@ class Conn {
         if (isEmpty(msg.wait) || msg.isNoOp) {
             return;
         }
-        let ns = this.Namespace(msg.Namespace);
+        let ns = this.namespace(msg.Namespace);
         if (ns === undefined) {
             this.writeEmptyReply(msg.wait);
             return;
@@ -572,9 +572,9 @@ class Conn {
         this.writeEmptyReply(msg.wait);
         fireEvent(ns, msg);
     }
-    Ask(msg) {
+    ask(msg) {
         return new Promise((resolve, reject) => {
-            if (this.IsClosed()) {
+            if (this.isClosed()) {
                 reject(exports.ErrClosed);
                 return;
             }
@@ -586,7 +586,7 @@ class Conn {
                 }
                 resolve(receive);
             }));
-            if (!this.Write(msg)) {
+            if (!this.write(msg)) {
                 reject(exports.ErrWrite);
                 return;
             }
@@ -603,7 +603,7 @@ class Conn {
     // }
     askConnect(namespace) {
         return __awaiter(this, void 0, void 0, function* () {
-            let ns = this.Namespace(namespace);
+            let ns = this.namespace(namespace);
             if (ns !== undefined) { // it's already connected.
                 return ns;
             }
@@ -623,7 +623,7 @@ class Conn {
                 return err;
             }
             try {
-                yield this.Ask(connectMessage);
+                yield this.ask(connectMessage);
             }
             catch (err) {
                 return err;
@@ -637,12 +637,12 @@ class Conn {
     }
     askDisconnect(msg) {
         return __awaiter(this, void 0, void 0, function* () {
-            let ns = this.Namespace(msg.Namespace);
+            let ns = this.namespace(msg.Namespace);
             if (ns === undefined) { // it's already connected.
                 return exports.ErrBadNamespace;
             }
             try {
-                yield this.Ask(msg);
+                yield this.ask(msg);
             }
             catch (err) {
                 return err;
@@ -653,16 +653,16 @@ class Conn {
             return fireEvent(ns, msg);
         });
     }
-    IsClosed() {
+    isClosed() {
         return this.closed || this.conn.readyState == this.conn.CLOSED || false;
     }
-    Write(msg) {
-        if (this.IsClosed()) {
+    write(msg) {
+        if (this.isClosed()) {
             return false;
         }
         if (!msg.isConnect() && !msg.isDisconnect()) {
             // namespace pre-write check.
-            let ns = this.Namespace(msg.Namespace);
+            let ns = this.namespace(msg.Namespace);
             if (ns === undefined) {
                 return false;
             }
@@ -674,16 +674,13 @@ class Conn {
                 }
             }
         }
-        this.write(serializeMessage(msg));
+        this.conn.send(serializeMessage(msg));
         return true;
     }
-    write(data) {
-        this.conn.send(data);
-    }
     writeEmptyReply(wait) {
-        this.write(genEmptyReplyToWait(wait));
+        this.conn.send(genEmptyReplyToWait(wait));
     }
-    Close() {
+    close() {
         if (this.closed) {
             return;
         }

@@ -5,7 +5,7 @@ const stdin = process.openStdin();
 const wsURL = "ws://localhost:8080/echo";
 async function runExample() {
   try {
-    var conn = await neffos.Dial(wsURL, {
+    var conn = await neffos.dial(wsURL, {
       default: {
         _OnNamespaceConnected: function (ns, msg) {
           console.log("connected to namespace: " + msg.Namespace);
@@ -30,12 +30,12 @@ async function runExample() {
       }
     });
 
-    var nsConn = await conn.Connect("default");
-    nsConn.Emit("chat", "Hello from client side!");
+    var nsConn = await conn.connect("default");
+    nsConn.emit("chat", "Hello from client side!");
 
     stdin.addListener("data", function (data) {
       const text = data.toString().trim();
-      nsConn.Emit("chat", text);
+      nsConn.emit("chat", text);
     });
 
   } catch (err) {

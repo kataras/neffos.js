@@ -5,7 +5,7 @@
         "build": "browserify ./app.js -o ./bundle.js"
     },
     "dependencies": {
-        "neffos": "^0.1.0"
+        "neffos": "latest"
     },
     "devDependencies": {
         "browserify": "^16.2.3"
