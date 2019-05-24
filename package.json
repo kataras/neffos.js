@@ -1,27 +1,27 @@
 {
     "name": "neffos.js",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "description": "javascript client for the modern neffos websocket framework",
     "keywords": [
+        "neffos",
         "realtime",
         "framework",
         "websocket",
         "events",
-        "iris",
-        "neffos"
+        "iris"
     ],
     "scripts": {
-        "toJS": "tsc --target es6 -module commonjs --sourceMap --declaration --declarationDir ./type_definitions --outDir ./dist ./src/neffos.ts",
+        "toJS": "tsc --target es6 -module commonjs --sourceMap --outDir ./dist ./src/neffos.ts",
         "minifyES6": "minify ./dist/neffos.js --outFile ./dist/neffos.min.js",
         "build": "npm run-script toJS && npm run-script minifyES6"
     },
-    "types": "type_definitions/neffos.d.ts",
-    "main": "./dist/neffos.min.js",
+    "source": "./src/neffos.ts",
+    "types": "./dist/neffos.d.ts",
+    "main": "./dist/neffos.js",
     "files": [
         "LICENSE",
         "README.md",
-        "dist/",
-        "type_definitions/"
+        "dist/"
     ],
     "license": "MIT",
     "repository": {

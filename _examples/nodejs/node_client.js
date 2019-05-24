@@ -1,4 +1,4 @@
-/// <reference path="../../type_definitions/neffos.d.ts" />
+/// <reference path="../../dist/neffos.d.ts" />
 const neffos = require('neffos');
 const stdin = process.openStdin();
 
@@ -6,7 +6,7 @@ const wsURL = "ws://localhost:8080/echo";
 async function runExample() {
   try {
     var conn = await neffos.dial(wsURL, {
-      default: {
+      default: { // "default" namespace.
         _OnNamespaceConnected: function (ns, msg) {
           console.log("connected to namespace: " + msg.Namespace);
         },
@@ -19,7 +19,7 @@ async function runExample() {
         _OnRoomLeft: function (ns, msg) {
           console.log("left from room: " + msg.Room);
         },
-        chat: function (ns, msg) {
+        chat: function (ns, msg) { // "chat" event.
           let prefix = "Server says: ";
 
           if (msg.Room !== "") {

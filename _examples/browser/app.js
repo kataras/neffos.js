@@ -1,4 +1,4 @@
-/// <reference path="../../type_definitions/neffos.d.ts" />
+/// <reference path="../../dist/neffos.d.ts" />
 import * as neffos from 'neffos'; // or const neffos = require('neffos');
 
 var scheme = document.location.protocol == "https:" ? "wss" : "ws";
@@ -7,10 +7,10 @@ var port = document.location.port ? ":" + document.location.port : "";
 var wsURL = scheme + "://" + document.location.hostname + port + "/echo";
 
 var outputTxt = document.getElementById("output");
-
+ 
 async function runExample() {
   let conn = await neffos.dial(wsURL, {
-    default: {
+    default: { // "default" namespace.
       _OnNamespaceConnected: function (ns, msg) {
         addMessage("connected to namespace: " + msg.Namespace);
       },
@@ -23,7 +23,7 @@ async function runExample() {
       _OnRoomLeft: function (ns, msg) {
         addMessage("left from room: " + msg.Room);
       },
-      chat: function (ns, msg) {
+      chat: function (ns, msg) { // "chat" event.
         let prefix = "";
 
         if (msg.Room !== "") {

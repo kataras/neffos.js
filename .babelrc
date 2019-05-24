@@ -30,7 +30,7 @@
 //
 //
 // "scripts": {
-//  "toJS": "tsc --target es6 -module commonjs --sourceMap --declaration --declarationDir ./type_definitions --outDir ./dist ./src/neffos.ts",
+//  "toJS": "tsc --target es6 -module commonjs --sourceMap --declaration --declarationDir ./dist --outDir ./dist ./src/neffos.ts",
 //  "toBrowser": "browserify ./dist/neffos.js -o ./dist/neffos.browserify.js",
 //  "toES5": "babel --plugins transform-es2015-modules-commonjs ./dist/neffos.js --out-file ./dist/neffos.legacy.min.js",
 //  "minify": "uglifyjs ./dist/neffos.legacy.min.js --compress  --output ./dist/neffos.legacy.min.js",
