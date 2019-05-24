@@ -1,106 +1,108 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
- const neffos = require('neffos');
+/// <reference path="../../dist/neffos.d.ts" />
+const neffos = require('neffos.js');
 
- var scheme = document.location.protocol == "https:" ? "wss" : "ws";
- var port = document.location.port ? ":" + document.location.port : "";
+var scheme = document.location.protocol == "https:" ? "wss" : "ws";
+var port = document.location.port ? ":" + document.location.port : "";
 
- var wsURL = scheme + "://" + document.location.hostname + port + "/echo";
+var wsURL = scheme + "://" + document.location.hostname + port + "/echo";
 
- var input = document.getElementById("input");
- var output = document.getElementById("output");
+var outputTxt = document.getElementById("output");
 
- async function runExample() {
-   let conn = await neffos.dial(wsURL, {
-     default: {
-       _OnNamespaceConnected: function(ns, msg) {
-         addMessage("connected to namespace: " + msg.Namespace);
-       },
-       _OnNamespaceDisconnect: function(ns, msg) {
-         addMessage("disconnected from namespace: " + msg.Namespace);
-       },
-       _OnRoomJoined: function(ns, msg) {
-         addMessage("joined to room: " + msg.Room);
-       },
-       _OnRoomLeft: function(ns, msg) {
-         addMessage("left from room: " + msg.Room);
-       },
-       chat: function(ns, msg) {
-         let prefix = "";
+async function runExample() {
+  let conn = await neffos.dial(wsURL, {
+    default: { // "default" namespace.
+      _OnNamespaceConnected: function (ns, msg) {
+        addMessage("connected to namespace: " + msg.Namespace);
+      },
+      _OnNamespaceDisconnect: function (ns, msg) {
+        addMessage("disconnected from namespace: " + msg.Namespace);
+      },
+      _OnRoomJoined: function (ns, msg) {
+        addMessage("joined to room: " + msg.Room);
+      },
+      _OnRoomLeft: function (ns, msg) {
+        addMessage("left from room: " + msg.Room);
+      },
+      chat: function (ns, msg) { // "chat" event.
+        let prefix = "";
 
-         if (msg.Room !== "") {
-           prefix = msg.Room + " >> ";
-         }
-         addMessage(prefix + msg.Body);
-       }
-     }
-   });
+        if (msg.Room !== "") {
+          prefix = msg.Room + " >> ";
+        }
+        addMessage(prefix + msg.Body);
+      }
+    }
+  });
 
-   try {
-     let nsConn = await conn.connect("default");
-     let joinedRoom = "";
-     let exampleRoomName = "room1";
+  try {
+    let nsConn = await conn.connect("default");
+    let joinedRoom = "";
+    let exampleRoomName = "room1";
 
-     let inputTxt = document.getElementById("input");
-     let sendBtn = document.getElementById("sendBtn");
+    let inputTxt = document.getElementById("input");
+    let sendBtn = document.getElementById("sendBtn");
 
-     sendBtn.disabled = false;
-     sendBtn.onclick = function() {
-       const input = inputTxt.value;
-       inputTxt.value = "";
+    sendBtn.disabled = false;
+    sendBtn.onclick = function () {
+      const input = inputTxt.value;
+      inputTxt.value = "";
 
-       switch (input) {
-         case "join":
-           nsConn.joinRoom(exampleRoomName);
-           joinedRoom = exampleRoomName;
-           break;
-         case "leave":
-           if (joinedRoom.length > 0) {
-             nsConn.room(exampleRoomName).leave();
-             joinedRoom = "";
-           }
-           break;
-         default:
-           if (joinedRoom.length > 0) {
-             nsConn.room(exampleRoomName).emit("chat", input);
-           } else {
-             nsConn.emit("chat", input);
-           }
+      switch (input) {
+        case "join":
+          nsConn.joinRoom(exampleRoomName).then((room) => {
+            room.emit("chat", "I just joined.");
+            joinedRoom = exampleRoomName;
+          });
+          break;
+        case "leave":
+          if (joinedRoom.length > 0) {
+            nsConn.room(exampleRoomName).leave();
+            joinedRoom = "";
+          }
+          break;
+        default:
+          if (joinedRoom.length > 0) {
+            nsConn.room(exampleRoomName).emit("chat", input);
+          } else {
+            nsConn.emit("chat", input);
+          }
 
-           addMessage("Me: " + input);
-       }
-     };
-   } catch (err) {
-     console.error(err);
-   }
- }
+          addMessage("Me: " + input);
+      }
+    };
+  } catch (err) {
+    console.error(err);
+  }
+}
 
- runExample();
- // OR:
- // neffos.dial(wsURL, {
- //   default: {
- //     _OnNamespaceConnected: function(c, msg) {
- //       console.info("connected to ", msg.Namespace);
- //     },
- //     _OnNamespaceDisconnect: function(c, msg) {
- //       console.info("disconnected from ", msg.Namespace);
- //     },
- //     chat: function(c, msg) {
- //       console.info("on chat: " + msg.Body);
- //     }
- //   }
- // })
- //   .then(function(conn) {
- //     let nsConn = conn.connect("default");
- //     [...]
- //   })
- //   .catch(function(err) {
- //     console.error("WebSocket error observed:", err);
- //   });
+runExample();
+// OR:
+// neffos.dial(wsURL, {
+//   default: {
+//     _OnNamespaceConnected: function(c, msg) {
+//       console.info("connected to ", msg.Namespace);
+//     },
+//     _OnNamespaceDisconnect: function(c, msg) {
+//       console.info("disconnected from ", msg.Namespace);
+//     },
+//     chat: function(c, msg) {
+//       console.info("on chat: " + msg.Body);
+//     }
+//   }
+// })
+//   .then(function(conn) {
+//     let nsConn = conn.connect("default");
+//     [...]
+//   })
+//   .catch(function(err) {
+//     console.error("WebSocket error observed:", err);
+//   });
 
- function addMessage(msg) {
-   output.innerHTML += msg + "\n";
- }
-},{"neffos":3}],2:[function(require,module,exports){
+function addMessage(msg) {
+  outputTxt.innerHTML += msg + "\n";
+}
+},{"neffos.js":3}],2:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -288,7 +290,792 @@ process.umask = function() { return 0; };
 
 },{}],3:[function(require,module,exports){
 (function (process){
-"use strict";var __awaiter=this&&this.__awaiter||function(a,b,c,d){return new(c||(c=Promise))(function(e,f){function g(a){try{i(d.next(a))}catch(a){f(a)}}function h(a){try{i(d["throw"](a))}catch(a){f(a)}}function i(a){a.done?e(a.value):new c(function(b){b(a.value)}).then(g,h)}i((d=d.apply(a,b||[])).next())})};Object.defineProperty(exports,"__esModule",{value:!0});const isBrowser="undefined"!=typeof window;var WebSocket;WebSocket=isBrowser?window.WebSocket:require("ws"),exports.OnNamespaceConnect="_OnNamespaceConnect",exports.OnNamespaceConnected="_OnNamespaceConnected",exports.OnNamespaceDisconnect="_OnNamespaceDisconnect",exports.OnRoomJoin="_OnRoomJoin",exports.OnRoomJoined="_OnRoomJoined",exports.OnRoomLeave="_OnRoomLeave",exports.OnRoomLeft="_OnRoomLeft",exports.OnAnyEvent="_OnAnyEvent",exports.OnNativeMessage="_OnNativeMessage";const ackBinary="M",ackIDBinary="A",ackNotOKBinary="H",waitIsConfirmationPrefix="#",waitComesFromClientPrefix="$";function isSystemEvent(a){return!(a!==exports.OnNamespaceConnect&&a!==exports.OnNamespaceConnected&&a!==exports.OnNamespaceDisconnect&&a!==exports.OnRoomJoin&&a!==exports.OnRoomJoined&&a!==exports.OnRoomLeave&&a!==exports.OnRoomLeft)}exports.isSystemEvent=isSystemEvent;function isEmpty(a){return!(void 0!==a)||!(null!==a)||("string"==typeof a||a instanceof String?0===a.length||""===a:!!(a instanceof Error)&&isEmpty(a.message))}class Message{isConnect(){return this.Event==exports.OnNamespaceConnect||!1}isDisconnect(){return this.Event==exports.OnNamespaceDisconnect||!1}isRoomJoin(){return this.Event==exports.OnRoomJoin||!1}isRoomLeft(){return this.Event==exports.OnRoomLeft||!1}isWait(){return!isEmpty(this.wait)&&(!(this.wait[0]!=waitIsConfirmationPrefix)||this.wait[0]==waitComesFromClientPrefix||!1)}}exports.Message=Message;const messageSeparator=";",validMessageSepCount=7,trueString="1",falseString="0";function serializeMessage(a){if(a.IsNative&&isEmpty(a.wait))return a.Body;let b=falseString,c=falseString,d=a.Body||"";return a.isError&&(d=a.Err,b=trueString),a.isNoOp&&(c=trueString),[a.wait||"",a.Namespace,a.Room||"",a.Event||"",b,c,d].join(messageSeparator)}function deserializeMessage(a,b){var c=new Message;if(0==a.length)return c.isInvalid=!0,c;let d=a.split(messageSeparator,validMessageSepCount);if(d.length!=validMessageSepCount)return b?(c.Event=exports.OnNativeMessage,c.Body=a):c.isInvalid=!0,c;c.wait=d[0],c.Namespace=d[1],c.Room=d[2],c.Event=d[3],c.isError=d[4]==trueString||!1,c.isNoOp=d[5]==trueString||!1;let e=d[6];return isEmpty(e)?c.Body="":c.isError?c.Err=e:c.Body=e,c.isInvalid=!1,c.IsForced=!1,c.IsLocal=!1,c.IsNative=b&&c.Event==exports.OnNativeMessage||!1,c}function genWait(){if(!isBrowser){let a=process.hrtime();return waitComesFromClientPrefix+1e9*a[0]+a[1]}else{let a=window.performance.now();return waitComesFromClientPrefix+a.toString()}}function genWaitConfirmation(a){return waitIsConfirmationPrefix+a}function genEmptyReplyToWait(a){return a+messageSeparator.repeat(validMessageSepCount-1)}class Room{constructor(a,b){this.nsConn=a,this.name=b}emit(a,b){let c=new Message;return c.Namespace=this.nsConn.namespace,c.Room=this.name,c.Event=a,c.Body=b,this.nsConn.conn.write(c)}leave(){let a=new Message;return a.Namespace=this.nsConn.namespace,a.Room=this.name,a.Event=exports.OnRoomLeave,this.nsConn.askRoomLeave(a)}}exports.Room=Room;class NSConn{constructor(a,b,c){this.conn=a,this.namespace=b,this.events=c,this.rooms=new Map}emit(a,b){let c=new Message;return c.Namespace=this.namespace,c.Event=a,c.Body=b,this.conn.write(c)}ask(a,b){let c=new Message;return c.Namespace=this.namespace,c.Event=a,c.Body=b,this.conn.ask(c)}joinRoom(a){return this.askRoomJoin(a)}room(a){return this.rooms.get(a)}leaveAll(){return __awaiter(this,void 0,void 0,function*(){let a=new Message;return a.Namespace=this.namespace,a.Event=exports.OnRoomLeft,a.IsLocal=!0,this.rooms.forEach((b,c)=>__awaiter(this,void 0,void 0,function*(){a.Room=c;try{yield this.askRoomLeave(a)}catch(a){return a}})),null})}forceLeaveAll(a){let b=new Message;b.Namespace=this.namespace,b.Event=exports.OnRoomLeave,b.IsForced=!0,b.IsLocal=a,this.rooms.forEach((a,c)=>{b.Room=c,fireEvent(this,b),this.rooms.delete(c),b.Event=exports.OnRoomLeft,fireEvent(this,b),b.Event=exports.OnRoomLeave})}disconnect(){let a=new Message;return a.Namespace=this.namespace,a.Event=exports.OnNamespaceDisconnect,this.conn.askDisconnect(a)}askRoomJoin(a){return __awaiter(this,void 0,void 0,function*(){let b=this.rooms.get(a);if(void 0!==b)return b;let c=new Message;c.Namespace=this.namespace,c.Room=a,c.Event=exports.OnRoomJoin,c.IsLocal=!0;try{yield this.conn.ask(c)}catch(a){return a}let d=fireEvent(this,c);return isEmpty(d)?(b=new Room(this,a),this.rooms.set(a,b),c.Event=exports.OnRoomJoined,fireEvent(this,c),b):d})}askRoomLeave(a){return __awaiter(this,void 0,void 0,function*(){if(!this.rooms.has(a.Room))return exports.ErrBadRoom;try{yield this.conn.ask(a)}catch(a){return a}let b=fireEvent(this,a);return isEmpty(b)?(this.rooms.delete(a.Room),a.Event=exports.OnRoomLeft,fireEvent(this,a),null):b})}replyRoomJoin(a){if(!(isEmpty(a.wait)||a.isNoOp)){if(!this.rooms.has(a.Room)){let b=fireEvent(this,a);if(!isEmpty(b))return a.Err=b.message,void this.conn.write(a);this.rooms.set(a.Room,new Room(this,a.Room)),a.Event=exports.OnRoomJoined,fireEvent(this,a)}this.conn.writeEmptyReply(a.wait)}}replyRoomLeave(a){return isEmpty(a.wait)||a.isNoOp?void 0:this.rooms.has(a.Room)?void(fireEvent(this,a),this.rooms.delete(a.Room),this.conn.writeEmptyReply(a.wait),a.Event=exports.OnRoomLeft,fireEvent(this,a)):void this.conn.writeEmptyReply(a.wait)}}exports.NSConn=NSConn;function fireEvent(a,b){return a.events.hasOwnProperty(b.Event)?a.events[b.Event](a,b):a.events.hasOwnProperty(exports.OnAnyEvent)?a.events[exports.OnAnyEvent](a,b):null}function getEvents(a,b){return a.hasOwnProperty(b)?a[b]:null}exports.ErrInvalidPayload=new Error("invalid payload"),exports.ErrBadNamespace=new Error("bad namespace"),exports.ErrBadRoom=new Error("bad room"),exports.ErrClosed=new Error("use of closed connection"),exports.ErrWrite=new Error("write closed");function dial(a,b,c){return-1==a.indexOf("ws")&&(a="ws://"+a),new Promise((d,e)=>{WebSocket||e("WebSocket is not accessible through this browser."),void 0===b&&e("connHandler is empty.");let f=new WebSocket(a,c),g=new Conn(f,b,c);f.binaryType="arraybuffer",f.onmessage=a=>{let b=g.handle(a);return isEmpty(b)?void(g.isAcknowledged()&&d(g)):void e(b)},f.onopen=()=>{f.send(ackBinary)},f.onerror=a=>{g.close(),e(a)}})}exports.dial=dial;class Conn{constructor(a,b,c){this.conn=a,this._isAcknowledged=!1;let d=b.hasOwnProperty("");this.allowNativeMessages=d&&b[""].hasOwnProperty(exports.OnNativeMessage),this.queue=[],this.waitingMessages=new Map,this.namespaces=b,this.connectedNamespaces=new Map,this.closed=!1,this.conn.onclose=()=>(this.close(),null)}isAcknowledged(){return this._isAcknowledged}handle(a){if(!this._isAcknowledged){let b=this.handleAck(a.data);return null==b?(this._isAcknowledged=!0,this.handleQueue()):this.conn.close(),b}return this.handleMessage(a.data)}handleAck(a){let b=a[0];switch(b){case ackIDBinary:let c=a.slice(1);this.ID=c;break;case ackNotOKBinary:let d=a.slice(1);return new Error(d);default:return this.queue.push(a),null;}}handleQueue(){null==this.queue||0==this.queue.length||this.queue.forEach((a,b)=>{this.queue.splice(b,1),this.handleMessage(a)})}handleMessage(a){let b=deserializeMessage(a,this.allowNativeMessages);if(b.isInvalid)return exports.ErrInvalidPayload;if(b.IsNative&&this.allowNativeMessages){let a=this.namespace("");return fireEvent(a,b)}if(b.isWait()){let a=this.waitingMessages.get(b.wait);if(null!=a)return void a(b)}const c=this.namespace(b.Namespace);switch(b.Event){case exports.OnNamespaceConnect:this.replyConnect(b);break;case exports.OnNamespaceDisconnect:this.replyDisconnect(b);break;case exports.OnRoomJoin:if(c!==void 0){c.replyRoomJoin(b);break}case exports.OnRoomLeave:if(c!==void 0){c.replyRoomLeave(b);break}default:if(c===void 0)return exports.ErrBadNamespace;b.IsLocal=!1;let a=fireEvent(c,b);if(!isEmpty(a))return b.Err=a.message,this.write(b),a;}return null}connect(a){return this.askConnect(a)}namespace(a){return this.connectedNamespaces.get(a)}replyConnect(a){if(isEmpty(a.wait)||a.isNoOp)return;let b=this.namespace(a.Namespace);if(void 0!==b)return void this.writeEmptyReply(a.wait);let c=getEvents(this.namespaces,a.Namespace);return void 0===c?(a.Err=exports.ErrBadNamespace.message,void this.write(a)):void(b=new NSConn(this,a.Namespace,c),this.connectedNamespaces.set(a.Namespace,b),this.writeEmptyReply(a.wait),a.Event=exports.OnNamespaceConnected,fireEvent(b,a))}replyDisconnect(a){if(!(isEmpty(a.wait)||a.isNoOp)){let b=this.namespace(a.Namespace);return void 0===b?void this.writeEmptyReply(a.wait):void(b.forceLeaveAll(!0),this.connectedNamespaces.delete(a.Namespace),this.writeEmptyReply(a.wait),fireEvent(b,a))}}ask(a){return new Promise((b,c)=>this.isClosed()?void c(exports.ErrClosed):(a.wait=genWait(),this.waitingMessages.set(a.wait,a=>a.isError?void c(new Error(a.Err)):void b(a)),!this.write(a))?void c(exports.ErrWrite):void 0)}askConnect(a){return __awaiter(this,void 0,void 0,function*(){let b=this.namespace(a);if(void 0!==b)return b;let c=getEvents(this.namespaces,a);if(void 0===c)return exports.ErrBadNamespace;let d=new Message;d.Namespace=a,d.Event=exports.OnNamespaceConnect,d.IsLocal=!0,b=new NSConn(this,a,c);let e=fireEvent(b,d);if(!isEmpty(e))return e;try{yield this.ask(d)}catch(a){return a}return this.connectedNamespaces.set(a,b),d.Event=exports.OnNamespaceConnected,fireEvent(b,d),b})}askDisconnect(a){return __awaiter(this,void 0,void 0,function*(){let b=this.namespace(a.Namespace);if(void 0===b)return exports.ErrBadNamespace;try{yield this.ask(a)}catch(a){return a}return b.forceLeaveAll(!0),this.connectedNamespaces.delete(a.Namespace),a.IsLocal=!0,fireEvent(b,a)})}isClosed(){return this.closed||this.conn.readyState==this.conn.CLOSED||!1}write(a){if(this.isClosed())return!1;if(!a.isConnect()&&!a.isDisconnect()){let b=this.namespace(a.Namespace);if(void 0===b)return!1;if(!isEmpty(a.Room)&&!a.isRoomJoin()&&!a.isRoomLeft()&&!b.rooms.has(a.Room))return!1}return this.conn.send(serializeMessage(a)),!0}writeEmptyReply(a){this.conn.send(genEmptyReplyToWait(a))}close(){if(this.closed)return;let a=new Message;a.Event=exports.OnNamespaceDisconnect,a.IsForced=!0,a.IsLocal=!0,this.connectedNamespaces.forEach(b=>{b.forceLeaveAll(!0),a.Namespace=b.namespace,fireEvent(b,a),this.connectedNamespaces.delete(b.namespace)}),this.waitingMessages.clear(),this.conn.readyState===this.conn.OPEN&&this.conn.close(),this.closed=!0}}exports.Conn=Conn;
+"use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+// Make it compatible to run with browser and inside nodejs
+// the good thing is that the node's WebSocket module has the same API as the browser's one,
+// so all works and minimum changes were required to achieve that result.
+// See the `genWait()` too.
+const isBrowser = (typeof window !== 'undefined');
+var WebSocket;
+if (!isBrowser) {
+    WebSocket = require('ws');
+}
+else {
+    WebSocket = window["WebSocket"];
+}
+/* The OnNamespaceConnect is the event name that it's fired on before namespace connect. */
+exports.OnNamespaceConnect = "_OnNamespaceConnect";
+/* The OnNamespaceConnected is the event name that it's fired on after namespace connect. */
+exports.OnNamespaceConnected = "_OnNamespaceConnected";
+/* The OnNamespaceDisconnect is the event name that it's fired on namespace disconnected. */
+exports.OnNamespaceDisconnect = "_OnNamespaceDisconnect";
+/* The OnRoomJoin is the event name that it's fired on before room join. */
+exports.OnRoomJoin = "_OnRoomJoin";
+/* The OnRoomJoined is the event name that it's fired on after room join. */
+exports.OnRoomJoined = "_OnRoomJoined";
+/* The OnRoomLeave is the event name that it's fired on before room leave. */
+exports.OnRoomLeave = "_OnRoomLeave";
+/* The OnRoomLeft is the event name that it's fired on after room leave. */
+exports.OnRoomLeft = "_OnRoomLeft";
+/* The OnAnyEvent is the event name that it's fired, if no incoming event was registered, it's a "wilcard". */
+exports.OnAnyEvent = "_OnAnyEvent";
+/* The OnNativeMessage is the event name, which if registered on empty ("") namespace
+   it accepts native messages(Message.Body and Message.IsNative is filled only). */
+exports.OnNativeMessage = "_OnNativeMessage";
+const ackBinary = 'M'; // see `onopen`, comes from client to server at startup.
+// see `handleAck`.
+const ackIDBinary = 'A'; // comes from server to client after ackBinary and ready as a prefix, the rest message is the conn's ID.
+const ackNotOKBinary = 'H'; // comes from server to client if `Server#OnConnected` errored as a prefix, the rest message is the error text.
+const waitIsConfirmationPrefix = '#';
+const waitComesFromClientPrefix = '$';
+/* The isSystemEvent reports whether the "event" is a system event;
+   connect, connected, disconnect, room join, room joined, room leave, room left. */
+function isSystemEvent(event) {
+    switch (event) {
+        case exports.OnNamespaceConnect:
+        case exports.OnNamespaceConnected:
+        case exports.OnNamespaceDisconnect:
+        case exports.OnRoomJoin:
+        case exports.OnRoomJoined:
+        case exports.OnRoomLeave:
+        case exports.OnRoomLeft:
+            return true;
+        default:
+            return false;
+    }
+}
+exports.isSystemEvent = isSystemEvent;
+function isEmpty(s) {
+    if (s === undefined) {
+        return true;
+    }
+    if (s === null) {
+        return true;
+    }
+    if (typeof s === 'string' || s instanceof String) {
+        return s.length === 0 || s === "";
+    }
+    if (s instanceof Error) {
+        return isEmpty(s.message);
+    }
+    return false;
+}
+/* The Message is the structure which describes the icoming data (and if `Conn.Write` is manually used to write). */
+class Message {
+    isConnect() {
+        return this.Event == exports.OnNamespaceConnect || false;
+    }
+    isDisconnect() {
+        return this.Event == exports.OnNamespaceDisconnect || false;
+    }
+    isRoomJoin() {
+        return this.Event == exports.OnRoomJoin || false;
+    }
+    isRoomLeft() {
+        return this.Event == exports.OnRoomLeft || false;
+    }
+    isWait() {
+        if (isEmpty(this.wait)) {
+            return false;
+        }
+        if (this.wait[0] == waitIsConfirmationPrefix) {
+            return true;
+        }
+        return this.wait[0] == waitComesFromClientPrefix || false;
+    }
+}
+exports.Message = Message;
+const messageSeparator = ';';
+const validMessageSepCount = 7;
+const trueString = "1";
+const falseString = "0";
+function serializeMessage(msg) {
+    if (msg.IsNative && isEmpty(msg.wait)) {
+        return msg.Body;
+    }
+    let isErrorString = falseString;
+    let isNoOpString = falseString;
+    let body = msg.Body || "";
+    if (msg.isError) {
+        body = msg.Err;
+        isErrorString = trueString;
+    }
+    if (msg.isNoOp) {
+        isNoOpString = trueString;
+    }
+    return [
+        msg.wait || "",
+        msg.Namespace,
+        msg.Room || "",
+        msg.Event || "",
+        isErrorString,
+        isNoOpString,
+        body
+    ].join(messageSeparator);
+}
+// <wait>;
+// <namespace>;
+// <room>;
+// <event>;
+// <isError(0-1)>;
+// <isNoOp(0-1)>;
+// <body||error_message>
+function deserializeMessage(data, allowNativeMessages) {
+    var msg = new Message();
+    if (data.length == 0) {
+        msg.isInvalid = true;
+        return msg;
+    }
+    let dts = data.split(messageSeparator, validMessageSepCount);
+    if (dts.length != validMessageSepCount) {
+        if (!allowNativeMessages) {
+            msg.isInvalid = true;
+        }
+        else {
+            msg.Event = exports.OnNativeMessage;
+            msg.Body = data;
+        }
+        return msg;
+    }
+    msg.wait = dts[0];
+    msg.Namespace = dts[1];
+    msg.Room = dts[2];
+    msg.Event = dts[3];
+    msg.isError = dts[4] == trueString || false;
+    msg.isNoOp = dts[5] == trueString || false;
+    let body = dts[6];
+    if (!isEmpty(body)) {
+        if (msg.isError) {
+            msg.Err = body;
+        }
+        else {
+            msg.Body = body;
+        }
+    }
+    else {
+        msg.Body = "";
+    }
+    msg.isInvalid = false;
+    msg.IsForced = false;
+    msg.IsLocal = false;
+    msg.IsNative = (allowNativeMessages && msg.Event == exports.OnNativeMessage) || false;
+    // msg.SetBinary = false;
+    return msg;
+}
+function genWait() {
+    if (!isBrowser) {
+        let hrTime = process.hrtime();
+        return waitComesFromClientPrefix + hrTime[0] * 1000000000 + hrTime[1];
+    }
+    else {
+        let now = window.performance.now();
+        return waitComesFromClientPrefix + now.toString();
+    }
+}
+function genWaitConfirmation(wait) {
+    return waitIsConfirmationPrefix + wait;
+}
+function genEmptyReplyToWait(wait) {
+    return wait + messageSeparator.repeat(validMessageSepCount - 1);
+}
+/* The Room describes a connected connection to a room,
+   emits messages with the `Message.Room` filled to the specific room
+   and `Message.Namespace` to the underline `NSConn`'s namespace. */
+class Room {
+    constructor(ns, roomName) {
+        this.nsConn = ns;
+        this.name = roomName;
+    }
+    /* The emit method sends a message to the server with its `Message.Room` filled to this specific room
+       and `Message.Namespace` to the underline `NSConn`'s namespace. */
+    emit(event, body) {
+        let msg = new Message();
+        msg.Namespace = this.nsConn.namespace;
+        msg.Room = this.name;
+        msg.Event = event;
+        msg.Body = body;
+        return this.nsConn.conn.write(msg);
+    }
+    /* The leave method sends a room leave signal to the server and if succeed it fires the `OnRoomLeave` and `OnRoomLeft` events. */
+    leave() {
+        let msg = new Message();
+        msg.Namespace = this.nsConn.namespace;
+        msg.Room = this.name;
+        msg.Event = exports.OnRoomLeave;
+        return this.nsConn.askRoomLeave(msg);
+    }
+}
+exports.Room = Room;
+/* The NSConn describes a connected connection to a specific namespace,
+   it emits with the `Message.Namespace` filled and it can join to multiple rooms.
+   A single Conn can be connected to one or more namespaces,
+   each connected namespace is described by this class. */
+class NSConn {
+    constructor(conn, namespace, events) {
+        this.conn = conn;
+        this.namespace = namespace;
+        this.events = events;
+        this.rooms = new Map();
+    }
+    /* The emit method sends a message to the server with its `Message.Namespace` filled to this specific namespace. */
+    emit(event, body) {
+        let msg = new Message();
+        msg.Namespace = this.namespace;
+        msg.Event = event;
+        msg.Body = body;
+        return this.conn.write(msg);
+    }
+    /* See `Conn.ask`. */
+    ask(event, body) {
+        let msg = new Message();
+        msg.Namespace = this.namespace;
+        msg.Event = event;
+        msg.Body = body;
+        return this.conn.ask(msg);
+    }
+    /* The joinRoom method can be used to join to a specific room, rooms are dynamic.
+       Returns a `Room` or an error. */
+    joinRoom(roomName) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield this.askRoomJoin(roomName);
+        });
+    }
+    /* The room method returns a joined `Room`. */
+    room(roomName) {
+        return this.rooms.get(roomName);
+    }
+    // Rooms(): Room[] {
+    //     let rooms = new Array<Room>(this.rooms.size);
+    //     this.rooms.forEach((room) => {
+    //         rooms.push(room);
+    //     })
+    //     return rooms;
+    // }
+    /* The leaveAll method sends a leave room signal to all rooms and fires the `OnRoomLeave` and `OnRoomLeft` (if no error caused) events. */
+    leaveAll() {
+        return __awaiter(this, void 0, void 0, function* () {
+            let leaveMsg = new Message();
+            leaveMsg.Namespace = this.namespace;
+            leaveMsg.Event = exports.OnRoomLeft;
+            leaveMsg.IsLocal = true;
+            this.rooms.forEach((value, roomName) => __awaiter(this, void 0, void 0, function* () {
+                leaveMsg.Room = roomName;
+                try {
+                    yield this.askRoomLeave(leaveMsg);
+                }
+                catch (err) {
+                    return err;
+                }
+            }));
+            return null;
+        });
+    }
+    forceLeaveAll(isLocal) {
+        let leaveMsg = new Message();
+        leaveMsg.Namespace = this.namespace;
+        leaveMsg.Event = exports.OnRoomLeave;
+        leaveMsg.IsForced = true;
+        leaveMsg.IsLocal = isLocal;
+        this.rooms.forEach((value, roomName) => {
+            leaveMsg.Room = roomName;
+            fireEvent(this, leaveMsg);
+            this.rooms.delete(roomName);
+            leaveMsg.Event = exports.OnRoomLeft;
+            fireEvent(this, leaveMsg);
+            leaveMsg.Event = exports.OnRoomLeave;
+        });
+    }
+    /* The disconnect method sends a disconnect signal to the server and fires the `OnNamespaceDisconnect` event. */
+    disconnect() {
+        let disconnectMsg = new Message();
+        disconnectMsg.Namespace = this.namespace;
+        disconnectMsg.Event = exports.OnNamespaceDisconnect;
+        return this.conn.askDisconnect(disconnectMsg);
+    }
+    askRoomJoin(roomName) {
+        return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
+            let room = this.rooms.get(roomName);
+            if (room !== undefined) {
+                resolve(room);
+                return;
+            }
+            let joinMsg = new Message();
+            joinMsg.Namespace = this.namespace;
+            joinMsg.Room = roomName;
+            joinMsg.Event = exports.OnRoomJoin;
+            joinMsg.IsLocal = true;
+            try {
+                yield this.conn.ask(joinMsg);
+            }
+            catch (err) {
+                reject(err);
+                return;
+            }
+            let err = fireEvent(this, joinMsg);
+            if (!isEmpty(err)) {
+                reject(err);
+                return;
+            }
+            room = new Room(this, roomName);
+            this.rooms.set(roomName, room);
+            joinMsg.Event = exports.OnRoomJoined;
+            fireEvent(this, joinMsg);
+            resolve(room);
+        }));
+    }
+    askRoomLeave(msg) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!this.rooms.has(msg.Room)) {
+                return exports.ErrBadRoom;
+            }
+            try {
+                yield this.conn.ask(msg);
+            }
+            catch (err) {
+                return err;
+            }
+            let err = fireEvent(this, msg);
+            if (!isEmpty(err)) {
+                return err;
+            }
+            this.rooms.delete(msg.Room);
+            msg.Event = exports.OnRoomLeft;
+            fireEvent(this, msg);
+            return null;
+        });
+    }
+    replyRoomJoin(msg) {
+        if (isEmpty(msg.wait) || msg.isNoOp) {
+            return;
+        }
+        if (!this.rooms.has(msg.Room)) {
+            let err = fireEvent(this, msg);
+            if (!isEmpty(err)) {
+                msg.Err = err.message;
+                this.conn.write(msg);
+                return;
+            }
+            this.rooms.set(msg.Room, new Room(this, msg.Room));
+            msg.Event = exports.OnRoomJoined;
+            fireEvent(this, msg);
+        }
+        this.conn.writeEmptyReply(msg.wait);
+    }
+    replyRoomLeave(msg) {
+        if (isEmpty(msg.wait) || msg.isNoOp) {
+            return;
+        }
+        if (!this.rooms.has(msg.Room)) {
+            this.conn.writeEmptyReply(msg.wait);
+            return;
+        }
+        fireEvent(this, msg);
+        this.rooms.delete(msg.Room);
+        this.conn.writeEmptyReply(msg.wait);
+        msg.Event = exports.OnRoomLeft;
+        fireEvent(this, msg);
+    }
+}
+exports.NSConn = NSConn;
+function fireEvent(ns, msg) {
+    if (ns.events.hasOwnProperty(msg.Event)) {
+        return ns.events[msg.Event](ns, msg);
+    }
+    if (ns.events.hasOwnProperty(exports.OnAnyEvent)) {
+        return ns.events[exports.OnAnyEvent](ns, msg);
+    }
+    return null;
+}
+function getEvents(namespaces, namespace) {
+    if (namespaces.hasOwnProperty(namespace)) {
+        return namespaces[namespace];
+    }
+    return null;
+}
+/* The dial function returns a neffos client, a new `Conn` instance.
+   First parameter is the endpoint, i.e ws://localhost:8080/echo,
+   the second parameter should be the Namespaces structure.
+   Example Code:
+
+    var conn = await neffos.dial("ws://localhost:8080/echo", {
+      default: { // "default" namespace.
+        _OnNamespaceConnected: function (ns, msg) {
+          console.log("connected to namespace: " + msg.Namespace);
+        },
+        _OnNamespaceDisconnect: function (ns, msg) {
+          console.log("disconnected from namespace: " + msg.Namespace);
+        },
+        _OnRoomJoined: function (ns, msg) {
+          console.log("joined to room: " + msg.Room);
+        },
+        _OnRoomLeft: function (ns, msg) {
+          console.log("left from room: " + msg.Room);
+        },
+        chat: function (ns, msg) { // "chat" event.
+          let prefix = "Server says: ";
+
+          if (msg.Room !== "") {
+            prefix = msg.Room + " >> ";
+          }
+          console.log(prefix + msg.Body);
+        }
+      }
+    });
+
+    var nsConn = await conn.connect("default");
+    nsConn.emit("chat", "Hello from client side!");
+
+See https://github.com/kataras/neffos.js/tree/master/_examples for more.
+*/
+function dial(endpoint, connHandler, protocols) {
+    if (endpoint.indexOf("ws") == -1) {
+        endpoint = "ws://" + endpoint;
+    }
+    return new Promise((resolve, reject) => {
+        if (!WebSocket) {
+            reject("WebSocket is not accessible through this browser.");
+        }
+        if (connHandler === undefined) {
+            reject("connHandler is empty.");
+        }
+        let ws = new WebSocket(endpoint, protocols);
+        let conn = new Conn(ws, connHandler, protocols);
+        ws.binaryType = "arraybuffer";
+        ws.onmessage = ((evt) => {
+            let err = conn.handle(evt);
+            if (!isEmpty(err)) {
+                reject(err);
+                return;
+            }
+            if (conn.isAcknowledged()) {
+                resolve(conn);
+            }
+        });
+        ws.onopen = ((evt) => {
+            // let b = new Uint8Array(1)
+            // b[0] = 1;
+            // this.conn.send(b.buffer);
+            ws.send(ackBinary);
+        });
+        ws.onerror = ((err) => {
+            conn.close();
+            reject(err);
+        });
+    });
+}
+exports.dial = dial;
+exports.ErrInvalidPayload = new Error("invalid payload");
+exports.ErrBadNamespace = new Error("bad namespace");
+exports.ErrBadRoom = new Error("bad room");
+exports.ErrClosed = new Error("use of closed connection");
+exports.ErrWrite = new Error("write closed");
+/* The Conn class contains the websocket connection and the neffos communication functionality.
+   Its `connect` will return an `NSCOnn` instance, each connection can connect to one or more namespaces.
+   Each `NSConn` can join to multiple rooms. */
+class Conn {
+    // private isConnectingProcesseses: string[]; // if elem exists then any receive of that namespace is locked until `askConnect` finished.
+    constructor(conn, connHandler, protocols) {
+        this.conn = conn;
+        this._isAcknowledged = false;
+        let hasEmptyNS = connHandler.hasOwnProperty("");
+        this.allowNativeMessages = hasEmptyNS && connHandler[""].hasOwnProperty(exports.OnNativeMessage);
+        this.queue = new Array();
+        this.waitingMessages = new Map();
+        this.namespaces = connHandler;
+        this.connectedNamespaces = new Map();
+        // this.isConnectingProcesseses = new Array<string>();
+        this.closed = false;
+        this.conn.onclose = ((evt) => {
+            this.close();
+            return null;
+        });
+    }
+    isAcknowledged() {
+        return this._isAcknowledged;
+    }
+    handle(evt) {
+        if (!this._isAcknowledged) {
+            // if (evt.data instanceof ArrayBuffer) {
+            // new Uint8Array(evt.data)
+            let err = this.handleAck(evt.data);
+            if (err == undefined) {
+                this._isAcknowledged = true;
+                this.handleQueue();
+            }
+            else {
+                this.conn.close();
+            }
+            return err;
+        }
+        return this.handleMessage(evt.data);
+    }
+    handleAck(data) {
+        let typ = data[0];
+        switch (typ) {
+            case ackIDBinary:
+                // let id = dec.decode(data.slice(1));
+                let id = data.slice(1);
+                this.ID = id;
+                break;
+            case ackNotOKBinary:
+                // let errorText = dec.decode(data.slice(1));
+                let errorText = data.slice(1);
+                return new Error(errorText);
+            default:
+                this.queue.push(data);
+                return null;
+        }
+    }
+    handleQueue() {
+        if (this.queue == undefined || this.queue.length == 0) {
+            return;
+        }
+        this.queue.forEach((item, index) => {
+            this.queue.splice(index, 1);
+            this.handleMessage(item);
+        });
+    }
+    handleMessage(data) {
+        let msg = deserializeMessage(data, this.allowNativeMessages);
+        if (msg.isInvalid) {
+            return exports.ErrInvalidPayload;
+        }
+        if (msg.IsNative && this.allowNativeMessages) {
+            let ns = this.namespace("");
+            return fireEvent(ns, msg);
+        }
+        if (msg.isWait()) {
+            let cb = this.waitingMessages.get(msg.wait);
+            if (cb != undefined) {
+                cb(msg);
+                return;
+            }
+        }
+        const ns = this.namespace(msg.Namespace);
+        switch (msg.Event) {
+            case exports.OnNamespaceConnect:
+                this.replyConnect(msg);
+                break;
+            case exports.OnNamespaceDisconnect:
+                this.replyDisconnect(msg);
+                break;
+            case exports.OnRoomJoin:
+                if (ns !== undefined) {
+                    ns.replyRoomJoin(msg);
+                    break;
+                }
+            case exports.OnRoomLeave:
+                if (ns !== undefined) {
+                    ns.replyRoomLeave(msg);
+                    break;
+                }
+            default:
+                // this.checkWaitForNamespace(msg.Namespace);
+                if (ns === undefined) {
+                    return exports.ErrBadNamespace;
+                }
+                msg.IsLocal = false;
+                let err = fireEvent(ns, msg);
+                if (!isEmpty(err)) {
+                    // write any error back to the server.
+                    msg.Err = err.message;
+                    this.write(msg);
+                    return err;
+                }
+        }
+        return null;
+    }
+    /* The connect method returns a new connected to the specific "namespace" `NSConn` instance or an error. */
+    connect(namespace) {
+        return this.askConnect(namespace);
+    }
+    /* The namespace method returns an already connected `NSConn`. */
+    namespace(namespace) {
+        return this.connectedNamespaces.get(namespace);
+    }
+    replyConnect(msg) {
+        if (isEmpty(msg.wait) || msg.isNoOp) {
+            return;
+        }
+        let ns = this.namespace(msg.Namespace);
+        if (ns !== undefined) {
+            this.writeEmptyReply(msg.wait);
+            return;
+        }
+        let events = getEvents(this.namespaces, msg.Namespace);
+        if (events === undefined) {
+            msg.Err = exports.ErrBadNamespace.message;
+            this.write(msg);
+            return;
+        }
+        ns = new NSConn(this, msg.Namespace, events);
+        this.connectedNamespaces.set(msg.Namespace, ns);
+        this.writeEmptyReply(msg.wait);
+        msg.Event = exports.OnNamespaceConnected;
+        fireEvent(ns, msg);
+    }
+    replyDisconnect(msg) {
+        if (isEmpty(msg.wait) || msg.isNoOp) {
+            return;
+        }
+        let ns = this.namespace(msg.Namespace);
+        if (ns === undefined) {
+            this.writeEmptyReply(msg.wait);
+            return;
+        }
+        ns.forceLeaveAll(true);
+        this.connectedNamespaces.delete(msg.Namespace);
+        this.writeEmptyReply(msg.wait);
+        fireEvent(ns, msg);
+    }
+    /* The ask method writes a message to the server and blocks until a response or an error. */
+    ask(msg) {
+        return new Promise((resolve, reject) => {
+            if (this.isClosed()) {
+                reject(exports.ErrClosed);
+                return;
+            }
+            msg.wait = genWait();
+            this.waitingMessages.set(msg.wait, ((receive) => {
+                if (receive.isError) {
+                    reject(new Error(receive.Err));
+                    return;
+                }
+                resolve(receive);
+            }));
+            if (!this.write(msg)) {
+                reject(exports.ErrWrite);
+                return;
+            }
+        });
+    }
+    // private addConnectProcess(namespace: string) {
+    //     this.isConnectingProcesseses.push(namespace);
+    // }
+    // private removeConnectProcess(namespace: string) {
+    //     let idx = this.isConnectingProcesseses.findIndex((value: string, index: number, obj) => { return value === namespace || false; });
+    //     if (idx !== -1) {
+    //         this.isConnectingProcesseses.splice(idx, 1);
+    //     }
+    // }
+    askConnect(namespace) {
+        return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
+            let ns = this.namespace(namespace);
+            if (ns !== undefined) { // it's already connected.
+                resolve(ns);
+                return;
+            }
+            let events = getEvents(this.namespaces, namespace);
+            if (events === undefined) {
+                reject(exports.ErrBadNamespace);
+                return;
+            }
+            // this.addConnectProcess(namespace);
+            let connectMessage = new Message();
+            connectMessage.Namespace = namespace;
+            connectMessage.Event = exports.OnNamespaceConnect;
+            connectMessage.IsLocal = true;
+            ns = new NSConn(this, namespace, events);
+            let err = fireEvent(ns, connectMessage);
+            if (!isEmpty(err)) {
+                // this.removeConnectProcess(namespace);
+                reject(err);
+                return;
+            }
+            try {
+                yield this.ask(connectMessage);
+            }
+            catch (err) {
+                reject(err);
+                return;
+            }
+            this.connectedNamespaces.set(namespace, ns);
+            connectMessage.Event = exports.OnNamespaceConnected;
+            fireEvent(ns, connectMessage);
+            resolve(ns);
+        }));
+    }
+    askDisconnect(msg) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let ns = this.namespace(msg.Namespace);
+            if (ns === undefined) { // it's already connected.
+                return exports.ErrBadNamespace;
+            }
+            try {
+                yield this.ask(msg);
+            }
+            catch (err) {
+                return err;
+            }
+            ns.forceLeaveAll(true);
+            this.connectedNamespaces.delete(msg.Namespace);
+            msg.IsLocal = true;
+            return fireEvent(ns, msg);
+        });
+    }
+    /* The isClosed method reports whether this connection is closed. */
+    isClosed() {
+        return this.closed || this.conn.readyState == this.conn.CLOSED || false;
+    }
+    /* The write method writes a message to the server and reports whether the connection is still available. */
+    write(msg) {
+        if (this.isClosed()) {
+            return false;
+        }
+        if (!msg.isConnect() && !msg.isDisconnect()) {
+            // namespace pre-write check.
+            let ns = this.namespace(msg.Namespace);
+            if (ns === undefined) {
+                return false;
+            }
+            // room per-write check.
+            if (!isEmpty(msg.Room) && !msg.isRoomJoin() && !msg.isRoomLeft()) {
+                if (!ns.rooms.has(msg.Room)) {
+                    // tried to send to a not joined room.
+                    return false;
+                }
+            }
+        }
+        this.conn.send(serializeMessage(msg));
+        return true;
+    }
+    writeEmptyReply(wait) {
+        this.conn.send(genEmptyReplyToWait(wait));
+    }
+    /* The close method will force-disconnect from all connected namespaces and force-leave from all joined rooms
+       and finally will terminate the underline websocket connection. After this method call the `Conn` is not usable anymore, a new `dial` call is required. */
+    close() {
+        if (this.closed) {
+            return;
+        }
+        let disconnectMsg = new Message();
+        disconnectMsg.Event = exports.OnNamespaceDisconnect;
+        disconnectMsg.IsForced = true;
+        disconnectMsg.IsLocal = true;
+        this.connectedNamespaces.forEach((ns) => {
+            ns.forceLeaveAll(true);
+            disconnectMsg.Namespace = ns.namespace;
+            fireEvent(ns, disconnectMsg);
+            this.connectedNamespaces.delete(ns.namespace);
+        });
+        this.waitingMessages.clear();
+        if (this.conn.readyState === this.conn.OPEN) {
+            this.conn.close();
+        }
+        this.closed = true;
+    }
+}
+exports.Conn = Conn;
+
 }).call(this,require('_process'))
 },{"_process":2,"ws":4}],4:[function(require,module,exports){
 'use strict';

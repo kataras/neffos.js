@@ -303,7 +303,7 @@ export class NSConn {
     }
 
     /* See `Conn.ask`. */
-    ask(event: string, body: WSData): Promise<Message | Error> {
+    ask(event: string, body: WSData): Promise<Message> {
         let msg = new Message();
         msg.Namespace = this.namespace;
         msg.Event = event;
@@ -312,8 +312,8 @@ export class NSConn {
     }
     /* The joinRoom method can be used to join to a specific room, rooms are dynamic.
        Returns a `Room` or an error. */
-    joinRoom(roomName: string): Promise<Room | Error> {
-        return this.askRoomJoin(roomName);
+    async joinRoom(roomName: string): Promise<Room> {
+        return await this.askRoomJoin(roomName);
     }
 
     /* The room method returns a joined `Room`. */
@@ -377,35 +377,40 @@ export class NSConn {
     }
 
 
-    async askRoomJoin(roomName: string): Promise<Room | Error> {
-        let room = this.rooms.get(roomName);
-        if (room !== undefined) {
-            return room;
-        }
+    askRoomJoin(roomName: string): Promise<Room> {
+        return new Promise(async (resolve, reject) => {
+            let room = this.rooms.get(roomName);
+            if (room !== undefined) {
+                resolve(room);
+                return;
+            }
 
-        let joinMsg = new Message();
-        joinMsg.Namespace = this.namespace;
-        joinMsg.Room = roomName;
-        joinMsg.Event = OnRoomJoin;
-        joinMsg.IsLocal = true;
+            let joinMsg = new Message();
+            joinMsg.Namespace = this.namespace;
+            joinMsg.Room = roomName;
+            joinMsg.Event = OnRoomJoin;
+            joinMsg.IsLocal = true;
 
-        try {
-            await this.conn.ask(joinMsg);
-        } catch (err) {
-            return err;
-        }
+            try {
+                await this.conn.ask(joinMsg);
+            } catch (err) {
+                reject(err);
+                return;
+            }
 
-        let err = fireEvent(this, joinMsg);
-        if (!isEmpty(err)) {
-            return err;
-        }
+            let err = fireEvent(this, joinMsg);
+            if (!isEmpty(err)) {
+                reject(err);
+                return;
+            }
 
-        room = new Room(this, roomName);
-        this.rooms.set(roomName, room);
+            room = new Room(this, roomName);
+            this.rooms.set(roomName, room);
 
-        joinMsg.Event = OnRoomJoined;
-        fireEvent(this, joinMsg);
-        return room;
+            joinMsg.Event = OnRoomJoined;
+            fireEvent(this, joinMsg);
+            resolve(room);
+        });
     }
 
     async askRoomLeave(msg: Message): Promise<Error> {
@@ -737,7 +742,7 @@ export class Conn {
     }
 
     /* The connect method returns a new connected to the specific "namespace" `NSConn` instance or an error. */
-    connect(namespace: string): Promise<NSConn | Error> {
+    connect(namespace: string): Promise<NSConn> {
         return this.askConnect(namespace);
     }
 
@@ -794,7 +799,7 @@ export class Conn {
     }
 
     /* The ask method writes a message to the server and blocks until a response or an error. */
-    ask(msg: Message): Promise<Message | Error> {
+    ask(msg: Message): Promise<Message> {
         return new Promise((resolve, reject) => {
             if (this.isClosed()) {
                 reject(ErrClosed);
@@ -830,44 +835,47 @@ export class Conn {
     //     }
     // }
 
-    private async askConnect(namespace: string): Promise<NSConn | Error> {
-        let ns = this.namespace(namespace);
-        if (ns !== undefined) { // it's already connected.
-            return ns;
-        }
+    private askConnect(namespace: string): Promise<NSConn> {
+        return new Promise(async (resolve, reject) => {
+            let ns = this.namespace(namespace);
+            if (ns !== undefined) { // it's already connected.
+                resolve(ns);
+                return;
+            }
 
-        let events = getEvents(this.namespaces, namespace);
-        if (events === undefined) {
-            return ErrBadNamespace;
-        }
+            let events = getEvents(this.namespaces, namespace);
+            if (events === undefined) {
+                reject(ErrBadNamespace);
+                return;
+            }
 
-        // this.addConnectProcess(namespace);
-        let connectMessage = new Message()
-        connectMessage.Namespace = namespace;
-        connectMessage.Event = OnNamespaceConnect;
-        connectMessage.IsLocal = true;
+            // this.addConnectProcess(namespace);
+            let connectMessage = new Message()
+            connectMessage.Namespace = namespace;
+            connectMessage.Event = OnNamespaceConnect;
+            connectMessage.IsLocal = true;
 
-        ns = new NSConn(this, namespace, events);
-        let err = fireEvent(ns, connectMessage);
-        if (!isEmpty(err)) {
-            // this.removeConnectProcess(namespace);
-            return err;
-        }
+            ns = new NSConn(this, namespace, events);
+            let err = fireEvent(ns, connectMessage);
+            if (!isEmpty(err)) {
+                // this.removeConnectProcess(namespace);
+                reject(err);
+                return;
+            }
 
-        try {
-            await this.ask(connectMessage);
-        } catch (err) {
-            return err;
-        }
+            try {
+                await this.ask(connectMessage);
+            } catch (err) {
+                reject(err);
+                return;
+            }
 
-        this.connectedNamespaces.set(namespace, ns);
+            this.connectedNamespaces.set(namespace, ns);
 
-        connectMessage.Event = OnNamespaceConnected;
-        fireEvent(ns, connectMessage);
-
-        // this.removeConnectProcess(namespace);
-
-        return ns;
+            connectMessage.Event = OnNamespaceConnected;
+            fireEvent(ns, connectMessage);
+            resolve(ns);
+        });
     }
 
     async askDisconnect(msg: Message): Promise<Error> {

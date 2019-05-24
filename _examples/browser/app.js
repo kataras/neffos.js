@@ -1,5 +1,5 @@
 /// <reference path="../../dist/neffos.d.ts" />
-import * as neffos from 'neffos'; // or const neffos = require('neffos');
+const neffos = require('neffos.js');
 
 var scheme = document.location.protocol == "https:" ? "wss" : "ws";
 var port = document.location.port ? ":" + document.location.port : "";
@@ -7,7 +7,7 @@ var port = document.location.port ? ":" + document.location.port : "";
 var wsURL = scheme + "://" + document.location.hostname + port + "/echo";
 
 var outputTxt = document.getElementById("output");
- 
+
 async function runExample() {
   let conn = await neffos.dial(wsURL, {
     default: { // "default" namespace.
@@ -49,8 +49,10 @@ async function runExample() {
 
       switch (input) {
         case "join":
-          nsConn.joinRoom(exampleRoomName);
-          joinedRoom = exampleRoomName;
+          nsConn.joinRoom(exampleRoomName).then((room) => {
+            room.emit("chat", "I just joined.");
+            joinedRoom = exampleRoomName;
+          });
           break;
         case "leave":
           if (joinedRoom.length > 0) {
