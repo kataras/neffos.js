@@ -34,5 +34,12 @@
 //  "toBrowser": "browserify ./dist/neffos.js -o ./dist/neffos.browserify.js",
 //  "toES5": "babel --plugins transform-es2015-modules-commonjs ./dist/neffos.js --out-file ./dist/neffos.legacy.min.js",
 //  "minify": "uglifyjs ./dist/neffos.legacy.min.js --compress  --output ./dist/neffos.legacy.min.js",
-//  "build": "npm run-script toJS && npm run-script toES5 && npm run-script minify"
+//  "build": "npm run-script toJS && npm run-script toES5 && npm run-script minify",
+//  "dtslint": "dtslint types"
+// },
+// "devDependencies": {
+//   "@types/node": "^12.0.2",
+//   "babel-minify": "^0.5.0",
+//   "dtslint": "^0.7.6",
+//   "typescript": "^3.4.5"
 // },
