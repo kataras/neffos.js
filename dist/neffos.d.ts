@@ -26,7 +26,7 @@ export const OnAnyEvent = "_OnAnyEvent";
 export const OnNativeMessage = "_OnNativeMessage";
 /* The isSystemEvent reports whether the "event" is a system event, (connect, connected, disconnect, room join, room joined, room leave, room left). */
 export function isSystemEvent(event: string): boolean;
-/* The Message is the structure which describes the icoming data (and if `Conn.Write` is manually used to write). */
+/* The Message is the structure which describes the incoming data (and if `Conn.Write` is manually used to write). */
 export class Message {
   /* The Namespace that this message sent to. */
   Namespace: string;
@@ -88,6 +88,10 @@ export class NSConn {
   disconnect(): Promise<Error>;
 }
 
+/* The MessageHandlerFunc is the definition type of the events' callback.
+   Its error can be written to the other side on specific events,
+   i.e on `OnNamespaceConnect` it will abort a remote namespace connection.
+   See examples for more. */
 export type MessageHandlerFunc = (c: NSConn, msg: Message) => Error;
 
 export interface Events {
@@ -138,7 +142,7 @@ export const ErrClosed: Error;
 export const ErrWrite: Error;
 
 /* The Conn class contains the websocket connection and the neffos communication functionality.
-   Its `connect` will return an `NSCOnn` instance, each connection can connect to one or more namespaces.
+   Its `connect` will return a new `NSConn` instance, each connection can connect to one or more namespaces.
    Each `NSConn` can join to multiple rooms. */
 export class Conn {
   /* ID is the generated connection ID from the server-side, all connected namespaces(`NSConn` instances)

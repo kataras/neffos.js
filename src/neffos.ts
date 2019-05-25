@@ -479,6 +479,10 @@ export class NSConn {
 }
 
 
+/* The MessageHandlerFunc is the definition type of the events' callback.
+   Its error can be written to the other side on specific events,
+   i.e on `OnNamespaceConnect` it will abort a remote namespace connection.
+   See examples for more. */
 export type MessageHandlerFunc = (c: NSConn, msg: Message) => Error;
 
 // type Namespaces = Map<string, Events>;
@@ -599,7 +603,7 @@ export const ErrClosed = new Error("use of closed connection");
 export const ErrWrite = new Error("write closed");
 
 /* The Conn class contains the websocket connection and the neffos communication functionality.
-   Its `connect` will return an `NSCOnn` instance, each connection can connect to one or more namespaces.
+   Its `connect` will return a new `NSConn` instance, each connection can connect to one or more namespaces.
    Each `NSConn` can join to multiple rooms. */
 export class Conn {
     private conn: WebSocket;
