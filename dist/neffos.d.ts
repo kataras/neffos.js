@@ -58,7 +58,8 @@ export class Room {
   /* The emit method sends a message to the server with its `Message.Room` filled to this specific room
      and `Message.Namespace` to the underline `NSConn`'s namespace. */
   emit(event: string, body: WSData): boolean;
-  /* The leave method sends a room leave signal to the server and if succeed it fires the `OnRoomLeave` and `OnRoomLeft` events. */
+  /* The leave method sends a local and server room leave signal `OnRoomLeave`
+     and if succeed it fires the OnRoomLeft` event. */
   leave(): Promise<Error>;
 }
 /* The NSConn describes a connected connection to a specific namespace,
@@ -82,7 +83,7 @@ export class NSConn {
   joinRoom(roomName: string): Promise<Room>;
   /* The room method returns a joined `Room`. */
   room(roomName: string): Room;
-  /* The leaveAll method sends a leave room signal to all rooms and fires the `OnRoomLeave` and `OnRoomLeft` (if no error caused) events. */
+  /* The leaveAll method sends a leave room signal to all rooms and fires the `OnRoomLeave` and `OnRoomLeft` (if no error occurred) events. */
   leaveAll(): Promise<Error>;
   /* The disconnect method sends a disconnect signal to the server and fires the `OnNamespaceDisconnect` event. */
   disconnect(): Promise<Error>;
@@ -153,7 +154,7 @@ export class Conn {
   connect(namespace: string): Promise<NSConn>;
   /* The namespace method returns an already connected `NSConn`. */
   namespace(namespace: string): NSConn;
-  /* The ask method writes a message to the server and blocks until a response or an error. */
+  /* The ask method writes a message to the server and blocks until a response or an error received. */
   ask(msg: Message): Promise<Message>;
   /* The isClosed method reports whether this connection is closed. */
   isClosed(): boolean;

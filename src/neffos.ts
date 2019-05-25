@@ -264,7 +264,8 @@ export class Room {
         return this.nsConn.conn.write(msg);
     }
 
-    /* The leave method sends a room leave signal to the server and if succeed it fires the `OnRoomLeave` and `OnRoomLeft` events. */
+    /* The leave method sends a local and server room leave signal `OnRoomLeave`
+       and if succeed it fires the OnRoomLeft` event. */
     leave(): Promise<Error> {
         let msg = new Message();
         msg.Namespace = this.nsConn.namespace;
@@ -329,7 +330,7 @@ export class NSConn {
     //     return rooms;
     // }
 
-    /* The leaveAll method sends a leave room signal to all rooms and fires the `OnRoomLeave` and `OnRoomLeft` (if no error caused) events. */
+    /* The leaveAll method sends a leave room signal to all rooms and fires the `OnRoomLeave` and `OnRoomLeft` (if no error occurred) events. */
     async leaveAll(): Promise<Error> {
         let leaveMsg = new Message();
         leaveMsg.Namespace = this.namespace;
@@ -802,7 +803,7 @@ export class Conn {
         fireEvent(ns, msg);
     }
 
-    /* The ask method writes a message to the server and blocks until a response or an error. */
+    /* The ask method writes a message to the server and blocks until a response or an error received. */
     ask(msg: Message): Promise<Message> {
         return new Promise((resolve, reject) => {
             if (this.isClosed()) {
