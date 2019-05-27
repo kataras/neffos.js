@@ -13,14 +13,14 @@
     "scripts": {
         "toJS": "tsc --target es6 -module commonjs --sourceMap --outDir ./dist ./src/neffos.ts",
         "minifyES6": "minify ./dist/neffos.js --outFile ./dist/neffos.min.js",
-        "build": "npm run-script toJS && npm run-script minifyES6"
+        "build": "npm run-script toJS && npm run-script minifyES6",
+        "lint": "node_modules/.bin/goodparts path/to/files/for/linting ./dist"
     },
     "source": "./src/neffos.ts",
     "types": "./dist/neffos.d.ts",
     "main": "./dist/neffos.js",
     "files": [
         "LICENSE",
-        "README.md",
         "dist/"
     ],
     "license": "MIT",
@@ -41,6 +41,7 @@
     "devDependencies": {
         "@types/node": "^12.0.2",
         "babel-minify": "^0.5.0",
+        "goodparts": "^1.2.1",
         "typescript": "^3.4.5"
     },
     "dependencies": {

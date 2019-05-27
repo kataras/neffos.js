@@ -1,0 +1,6 @@
+.npmignore
+.travis.yml
+.babelrc
+gh_logo_js.png
+README.md
+_examples/
