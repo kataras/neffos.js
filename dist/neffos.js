@@ -213,7 +213,8 @@ class Room {
         msg.Body = body;
         return this.nsConn.conn.write(msg);
     }
-    /* The leave method sends a room leave signal to the server and if succeed it fires the `OnRoomLeave` and `OnRoomLeft` events. */
+    /* The leave method sends a local and server room leave signal `OnRoomLeave`
+       and if succeed it fires the OnRoomLeft` event. */
     leave() {
         let msg = new Message();
         msg.Namespace = this.nsConn.namespace;
@@ -268,7 +269,7 @@ class NSConn {
     //     })
     //     return rooms;
     // }
-    /* The leaveAll method sends a leave room signal to all rooms and fires the `OnRoomLeave` and `OnRoomLeft` (if no error caused) events. */
+    /* The leaveAll method sends a leave room signal to all rooms and fires the `OnRoomLeave` and `OnRoomLeft` (if no error occurred) events. */
     leaveAll() {
         return __awaiter(this, void 0, void 0, function* () {
             let leaveMsg = new Message();
@@ -395,25 +396,76 @@ class NSConn {
 }
 exports.NSConn = NSConn;
 function fireEvent(ns, msg) {
-    if (ns.events.hasOwnProperty(msg.Event)) {
-        return ns.events[msg.Event](ns, msg);
+    if (ns.events.has(msg.Event)) {
+        return ns.events.get(msg.Event)(ns, msg);
     }
-    if (ns.events.hasOwnProperty(exports.OnAnyEvent)) {
-        return ns.events[exports.OnAnyEvent](ns, msg);
+    if (ns.events.has(exports.OnAnyEvent)) {
+        return ns.events.get(exports.OnAnyEvent)(ns, msg);
     }
     return null;
 }
+function isNull(obj) {
+    return (obj === null || obj === undefined || typeof obj === 'undefined');
+}
+function resolveNamespaces(obj, reject) {
+    if (isNull(obj)) {
+        if (!isNull(reject)) {
+            reject("connHandler is empty.");
+        }
+        return null;
+    }
+    let namespaces = new Map();
+    // 1. if contains function instead of a string key then it's Events otherwise it's Namespaces.
+    // 2. if contains a mix of functions and keys then ~put those functions to the namespaces[""]~ it is NOT valid.
+    let events = new Map();
+    // const isMessageHandlerFunc = (value: any): value is MessageHandlerFunc => true;
+    let totalKeys = 0;
+    Object.keys(obj).forEach(function (key, index) {
+        totalKeys++;
+        let value = obj[key];
+        // if (isMessageHandlerFunc(value)) {
+        if (value instanceof Function) {
+            // console.log(key + " event probably contains a message handler: ", value)
+            events.set(key, value);
+        }
+        else if (value instanceof Map) {
+            // console.log(key + " is a namespace map which contains the following events: ", value)
+            namespaces.set(key, value);
+        }
+        else {
+            // it's an object, convert it to a map, it's events.
+            // console.log(key + " is an object of: ", value);
+            let objEvents = new Map();
+            Object.keys(value).forEach(function (objKey, objIndex) {
+                // console.log("set event: " + objKey + " of value: ", value[objKey])
+                objEvents.set(objKey, value[objKey]);
+            });
+            namespaces.set(key, objEvents);
+        }
+    });
+    if (events.size > 0) {
+        if (totalKeys != events.size) {
+            if (!isNull(reject)) {
+                reject("all keys of connHandler should be events, mix of namespaces and event callbacks is not supported " + events.size + " vs total " + totalKeys);
+            }
+            return null;
+        }
+        namespaces.set("", events);
+    }
+    // console.log(namespaces);
+    return namespaces;
+}
 function getEvents(namespaces, namespace) {
-    if (namespaces.hasOwnProperty(namespace)) {
-        return namespaces[namespace];
+    if (namespaces.has(namespace)) {
+        return namespaces.get(namespace);
     }
     return null;
 }
 /* The dial function returns a neffos client, a new `Conn` instance.
    First parameter is the endpoint, i.e ws://localhost:8080/echo,
-   the second parameter should be the Namespaces structure.
+   the second parameter can be any object of the form of:
+   namespace: {eventName: eventHandler, eventName2: ...} or {eventName: eventHandler}.
    Example Code:
-
     var conn = await neffos.dial("ws://localhost:8080/echo", {
       default: { // "default" namespace.
         _OnNamespaceConnected: function (ns, msg) {
@@ -430,7 +482,6 @@ function getEvents(namespaces, namespace) {
         },
         chat: function (ns, msg) { // "chat" event.
           let prefix = "Server says: ";
-
           if (msg.Room !== "") {
             prefix = msg.Room + " >> ";
           }
@@ -441,8 +492,7 @@ function getEvents(namespaces, namespace) {
 
     var nsConn = await conn.connect("default");
     nsConn.emit("chat", "Hello from client side!");
-
-See https://github.com/kataras/neffos.js/tree/master/_examples for more.
+    See https://github.com/kataras/neffos.js/tree/master/_examples for more.
 */
 function dial(endpoint, connHandler, protocols) {
     if (endpoint.indexOf("ws") == -1) {
@@ -452,11 +502,12 @@ function dial(endpoint, connHandler, protocols) {
         if (!WebSocket) {
             reject("WebSocket is not accessible through this browser.");
         }
-        if (connHandler === undefined) {
-            reject("connHandler is empty.");
+        let namespaces = resolveNamespaces(connHandler, reject);
+        if (isNull(namespaces)) {
+            return;
         }
         let ws = new WebSocket(endpoint, protocols);
-        let conn = new Conn(ws, connHandler, protocols);
+        let conn = new Conn(ws, namespaces, protocols);
         ws.binaryType = "arraybuffer";
         ws.onmessage = ((evt) => {
             let err = conn.handle(evt);
@@ -487,18 +538,18 @@ exports.ErrBadRoom = new Error("bad room");
 exports.ErrClosed = new Error("use of closed connection");
 exports.ErrWrite = new Error("write closed");
 /* The Conn class contains the websocket connection and the neffos communication functionality.
-   Its `connect` will return an `NSCOnn` instance, each connection can connect to one or more namespaces.
+   Its `connect` will return a new `NSConn` instance, each connection can connect to one or more namespaces.
    Each `NSConn` can join to multiple rooms. */
 class Conn {
     // private isConnectingProcesseses: string[]; // if elem exists then any receive of that namespace is locked until `askConnect` finished.
-    constructor(conn, connHandler, protocols) {
+    constructor(conn, namespaces, protocols) {
         this.conn = conn;
         this._isAcknowledged = false;
-        let hasEmptyNS = connHandler.hasOwnProperty("");
-        this.allowNativeMessages = hasEmptyNS && connHandler[""].hasOwnProperty(exports.OnNativeMessage);
+        this.namespaces = namespaces;
+        let hasEmptyNS = namespaces.has("");
+        this.allowNativeMessages = hasEmptyNS && namespaces.get("").has(exports.OnNativeMessage);
         this.queue = new Array();
         this.waitingMessages = new Map();
-        this.namespaces = connHandler;
         this.connectedNamespaces = new Map();
         // this.isConnectingProcesseses = new Array<string>();
         this.closed = false;
@@ -620,7 +671,7 @@ class Conn {
             return;
         }
         let events = getEvents(this.namespaces, msg.Namespace);
-        if (events === undefined) {
+        if (isNull(events)) {
             msg.Err = exports.ErrBadNamespace.message;
             this.write(msg);
             return;
@@ -645,7 +696,7 @@ class Conn {
         this.writeEmptyReply(msg.wait);
         fireEvent(ns, msg);
     }
-    /* The ask method writes a message to the server and blocks until a response or an error. */
+    /* The ask method writes a message to the server and blocks until a response or an error received. */
     ask(msg) {
         return new Promise((resolve, reject) => {
             if (this.isClosed()) {
@@ -683,7 +734,7 @@ class Conn {
                 return;
             }
             let events = getEvents(this.namespaces, namespace);
-            if (events === undefined) {
+            if (isNull(events)) {
                 reject(exports.ErrBadNamespace);
                 return;
             }

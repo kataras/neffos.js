@@ -1,3 +1,5 @@
+import { stringify } from "querystring";
+
 // Make it compatible to run with browser and inside nodejs
 // the good thing is that the node's WebSocket module has the same API as the browser's one,
 // so all works and minimum changes were required to achieve that result.
@@ -486,33 +488,83 @@ export class NSConn {
    See examples for more. */
 export type MessageHandlerFunc = (c: NSConn, msg: Message) => Error;
 
-// type Namespaces = Map<string, Events>;
-// type Events = Map<string, MessageHandlerFunc>;
 
-
-export interface Events {
-    [key: string]: MessageHandlerFunc;
-}
+export type Events = Map<string, MessageHandlerFunc>
+export type Namespaces = Map<string, Events>;
 
 function fireEvent(ns: NSConn, msg: Message): Error {
-    if (ns.events.hasOwnProperty(msg.Event)) {
-        return ns.events[msg.Event](ns, msg);
+    if (ns.events.has(msg.Event)) {
+        return ns.events.get(msg.Event)(ns, msg);
     }
 
-    if (ns.events.hasOwnProperty(OnAnyEvent)) {
-        return ns.events[OnAnyEvent](ns, msg);
+    if (ns.events.has(OnAnyEvent)) {
+        return ns.events.get(OnAnyEvent)(ns, msg);
     }
 
     return null;
 }
 
-export interface Namespaces {
-    [key: string]: Events;
+
+function isNull(obj: any): boolean {
+    return (obj === null || obj === undefined || typeof obj === 'undefined')
+}
+
+function resolveNamespaces(obj: any, reject: (reason?: any) => void): Namespaces {
+    if (isNull(obj)) {
+        if (!isNull(reject)) {
+            reject("connHandler is empty.");
+        }
+        return null;
+    }
+
+    let namespaces = new Map<string, Map<string, MessageHandlerFunc>>();
+
+    // 1. if contains function instead of a string key then it's Events otherwise it's Namespaces.
+    // 2. if contains a mix of functions and keys then ~put those functions to the namespaces[""]~ it is NOT valid.
+
+    let events: Events = new Map<string, MessageHandlerFunc>();
+    // const isMessageHandlerFunc = (value: any): value is MessageHandlerFunc => true;
+
+    let totalKeys: number = 0;
+    Object.keys(obj).forEach(function (key, index) {
+        totalKeys++;
+        let value = obj[key];
+        // if (isMessageHandlerFunc(value)) {
+        if (value instanceof Function) {
+            // console.log(key + " event probably contains a message handler: ", value)
+            events.set(key, value)
+        } else if (value instanceof Map) {
+            // console.log(key + " is a namespace map which contains the following events: ", value)
+            namespaces.set(key, value);
+        } else {
+            // it's an object, convert it to a map, it's events.
+            // console.log(key + " is an object of: ", value);
+            let objEvents = new Map<string, MessageHandlerFunc>();
+            Object.keys(value).forEach(function (objKey, objIndex) {
+                // console.log("set event: " + objKey + " of value: ", value[objKey])
+                objEvents.set(objKey, value[objKey]);
+            });
+            namespaces.set(key, objEvents)
+        }
+    });
+
+    if (events.size > 0) {
+        if (totalKeys != events.size) {
+            if (!isNull(reject)) {
+                reject("all keys of connHandler should be events, mix of namespaces and event callbacks is not supported " + events.size + " vs total " + totalKeys);
+            }
+            return null;
+        }
+        namespaces.set("", events);
+    }
+
+    // console.log(namespaces);
+    return namespaces;
 }
 
 function getEvents(namespaces: Namespaces, namespace: string): Events {
-    if (namespaces.hasOwnProperty(namespace)) {
-        return namespaces[namespace];
+    if (namespaces.has(namespace)) {
+        return namespaces.get(namespace);
     }
 
     return null;
@@ -522,9 +574,9 @@ type waitingMessageFunc = (msg: Message) => void;
 
 /* The dial function returns a neffos client, a new `Conn` instance.
    First parameter is the endpoint, i.e ws://localhost:8080/echo,
-   the second parameter should be the Namespaces structure.
+   the second parameter can be any object of the form of:
+   namespace: {eventName: eventHandler, eventName2: ...} or {eventName: eventHandler}.
    Example Code:
-
     var conn = await neffos.dial("ws://localhost:8080/echo", {
       default: { // "default" namespace.
         _OnNamespaceConnected: function (ns, msg) {
@@ -541,7 +593,6 @@ type waitingMessageFunc = (msg: Message) => void;
         },
         chat: function (ns, msg) { // "chat" event.
           let prefix = "Server says: ";
-
           if (msg.Room !== "") {
             prefix = msg.Room + " >> ";
           }
@@ -552,10 +603,9 @@ type waitingMessageFunc = (msg: Message) => void;
 
     var nsConn = await conn.connect("default");
     nsConn.emit("chat", "Hello from client side!");
-
-See https://github.com/kataras/neffos.js/tree/master/_examples for more.
+    See https://github.com/kataras/neffos.js/tree/master/_examples for more.
 */
-export function dial(endpoint: string, connHandler: Namespaces, protocols?: string[]): Promise<Conn> {
+export function dial(endpoint: string, connHandler: any, protocols?: string[]): Promise<Conn> {
     if (endpoint.indexOf("ws") == -1) {
         endpoint = "ws://" + endpoint;
     }
@@ -566,12 +616,13 @@ export function dial(endpoint: string, connHandler: Namespaces, protocols?: stri
         }
 
 
-        if (connHandler === undefined) {
-            reject("connHandler is empty.");
+        let namespaces = resolveNamespaces(connHandler, reject);
+        if (isNull(namespaces)) {
+            return;
         }
 
         let ws = new WebSocket(endpoint, protocols);
-        let conn = new Conn(ws, connHandler, protocols);
+        let conn = new Conn(ws, namespaces, protocols);
         ws.binaryType = "arraybuffer";
         ws.onmessage = ((evt: MessageEvent) => {
             let err = conn.handle(evt);
@@ -622,14 +673,14 @@ export class Conn {
     private connectedNamespaces: Map<string, NSConn>;
     // private isConnectingProcesseses: string[]; // if elem exists then any receive of that namespace is locked until `askConnect` finished.
 
-    constructor(conn: WebSocket, connHandler: Namespaces, protocols?: string[]) {
+    constructor(conn: WebSocket, namespaces: Namespaces, protocols?: string[]) {
         this.conn = conn;
         this._isAcknowledged = false;
-        let hasEmptyNS = connHandler.hasOwnProperty("");
-        this.allowNativeMessages = hasEmptyNS && connHandler[""].hasOwnProperty(OnNativeMessage);
+        this.namespaces = namespaces
+        let hasEmptyNS = namespaces.has("");
+        this.allowNativeMessages = hasEmptyNS && namespaces.get("").has(OnNativeMessage);
         this.queue = new Array<string>();
         this.waitingMessages = new Map<string, waitingMessageFunc>();
-        this.namespaces = connHandler;
         this.connectedNamespaces = new Map<string, NSConn>();
         // this.isConnectingProcesseses = new Array<string>();
         this.closed = false;
@@ -768,7 +819,7 @@ export class Conn {
         }
 
         let events = getEvents(this.namespaces, msg.Namespace)
-        if (events === undefined) {
+        if (isNull(events)) {
             msg.Err = ErrBadNamespace.message;
             this.write(msg);
             return;
@@ -849,7 +900,7 @@ export class Conn {
             }
 
             let events = getEvents(this.namespaces, namespace);
-            if (events === undefined) {
+            if (isNull(events)) {
                 reject(ErrBadNamespace);
                 return;
             }

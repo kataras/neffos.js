@@ -95,16 +95,13 @@ export class NSConn {
    See examples for more. */
 export type MessageHandlerFunc = (c: NSConn, msg: Message) => Error;
 
-export interface Events {
-  [key: string]: MessageHandlerFunc;
-}
-export interface Namespaces {
-  [key: string]: Events;
-}
+export type Events = Map<string, MessageHandlerFunc>
+export type Namespaces = Map<string, Events>;
 
 /* The dial function returns a neffos client, a new `Conn` instance.
    First parameter is the endpoint, i.e ws://localhost:8080/echo,
-   the second parameter should be the Namespaces structure.
+   the second parameter can be any object of the form of:
+   namespace: {eventName: eventHandler, eventName2: ...} or {eventName: eventHandler}.
    Example Code:
     var conn = await neffos.dial("ws://localhost:8080/echo", {
       default: { // "default" namespace.
@@ -134,7 +131,7 @@ export interface Namespaces {
     nsConn.emit("chat", "Hello from client side!");
     See https://github.com/kataras/neffos.js/tree/master/_examples for more.
 */
-export function dial(endpoint: string, connHandler: Namespaces, protocols?: string[]): Promise<Conn>;
+export function dial(endpoint: string, connHandler: any, protocols?: string[]): Promise<Conn>;
 
 export const ErrInvalidPayload: Error;
 export const ErrBadNamespace: Error;
@@ -149,7 +146,7 @@ export class Conn {
   /* ID is the generated connection ID from the server-side, all connected namespaces(`NSConn` instances)
     that belong to that connection have the same ID. It is available immediately after the `dial`. */
   ID: string;
-  constructor(conn: any, connHandler: Namespaces, protocols?: string[]);
+  constructor(conn: any, namespaces: Namespaces, protocols?: string[]);
   /* The connect method returns a new connected to the specific "namespace" `NSConn` instance or an error. */
   connect(namespace: string): Promise<NSConn>;
   /* The namespace method returns an already connected `NSConn`. */

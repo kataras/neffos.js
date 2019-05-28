@@ -71,6 +71,7 @@ async function runExample() {
       }
     };
   } catch (err) {
+    window.alert(err);
     console.error(err);
   }
 }
@@ -97,7 +98,8 @@ runExample();
 //   .catch(function(err) {
 //     console.error("WebSocket error observed:", err);
 //   });
-
+// You can omit the "default" and simply define only Events, the namespace will be an empty string"",
+// however if you decide to make any changes on this example make sure the changes are reflecting inside the ../server.go file as well.
 function addMessage(msg) {
   outputTxt.innerHTML += msg + "\n";
 }

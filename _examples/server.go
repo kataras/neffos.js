@@ -23,7 +23,7 @@ var handler = neffos.WithTimeout{
 	ReadTimeout:  timeout,
 	WriteTimeout: timeout,
 	Namespaces: neffos.Namespaces{
-		"default": neffos.Events{
+		namespace: neffos.Events{
 			neffos.OnNamespaceConnect: func(c *neffos.NSConn, msg neffos.Message) error {
 				return nil
 			},
