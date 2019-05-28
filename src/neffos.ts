@@ -1,5 +1,3 @@
-import { stringify } from "querystring";
-
 // Make it compatible to run with browser and inside nodejs
 // the good thing is that the node's WebSocket module has the same API as the browser's one,
 // so all works and minimum changes were required to achieve that result.
