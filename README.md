@@ -9,7 +9,7 @@ It can run through any modern [browser](_examples/browser) and [nodejs](_example
 ## Installation
 
 ```sh
-$ npm install --save neffos.js@0.1.3
+$ npm install --save neffos.js@0.1.5
 ```
 
 ```js
