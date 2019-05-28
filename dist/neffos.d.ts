@@ -149,6 +149,9 @@ export class Conn {
   constructor(conn: any, namespaces: Namespaces, protocols?: string[]);
   /* The connect method returns a new connected to the specific "namespace" `NSConn` instance or an error. */
   connect(namespace: string): Promise<NSConn>;
+  /* waitServerConnect method blocks until server manually calls the connection's `Connect`
+   on the `Server#OnConnected` event. */
+  waitServerConnect(namespace: string): Promise<NSConn>;
   /* The namespace method returns an already connected `NSConn`. */
   namespace(namespace: string): NSConn;
   /* The ask method writes a message to the server and blocks until a response or an error received. */

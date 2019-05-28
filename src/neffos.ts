@@ -663,7 +663,8 @@ export class Conn {
     /* ID is the generated connection ID from the server-side, all connected namespaces(`NSConn` instances)
       that belong to that connection have the same ID. It is available immediately after the `dial`. */
     ID: string;
-    closed: boolean;
+    private closed: boolean;
+    private waitServerConnectNotifiers: Map<string, () => void>;
 
     private queue: WSData[];
     private waitingMessages: Map<string, waitingMessageFunc>;
@@ -800,6 +801,21 @@ export class Conn {
         return this.askConnect(namespace);
     }
 
+    /* waitServerConnect method blocks until server manually calls the connection's `Connect`
+       on the `Server#OnConnected` event. */
+    waitServerConnect(namespace: string): Promise<NSConn> {
+        if (isNull(this.waitServerConnectNotifiers)) {
+            this.waitServerConnectNotifiers = new Map<string, () => void>();
+        }
+
+        return new Promise(async (resolve, reject) => {
+            this.waitServerConnectNotifiers.set(namespace, () => {
+                this.waitServerConnectNotifiers.delete(namespace);
+                resolve(this.namespace(namespace));
+            })
+        });
+    }
+
     /* The namespace method returns an already connected `NSConn`. */
     namespace(namespace: string): NSConn {
         return this.connectedNamespaces.get(namespace)
@@ -830,6 +846,12 @@ export class Conn {
 
         msg.Event = OnNamespaceConnected;
         fireEvent(ns, msg);
+
+        if (!isNull(this.waitServerConnectNotifiers) && this.waitServerConnectNotifiers.size > 0) {
+            if (this.waitServerConnectNotifiers.has(msg.Namespace)) {
+                this.waitServerConnectNotifiers.get(msg.Namespace)();
+            }
+        }
     }
 
     private replyDisconnect(msg: Message): void {

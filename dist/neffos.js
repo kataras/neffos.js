@@ -657,6 +657,19 @@ class Conn {
     connect(namespace) {
         return this.askConnect(namespace);
     }
+    /* waitServerConnect method blocks until server manually calls the connection's `Connect`
+       on the `Server#OnConnected` event. */
+    waitServerConnect(namespace) {
+        if (isNull(this.waitServerConnectNotifiers)) {
+            this.waitServerConnectNotifiers = new Map();
+        }
+        return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
+            this.waitServerConnectNotifiers.set(namespace, () => {
+                this.waitServerConnectNotifiers.delete(namespace);
+                resolve(this.namespace(namespace));
+            });
+        }));
+    }
     /* The namespace method returns an already connected `NSConn`. */
     namespace(namespace) {
         return this.connectedNamespaces.get(namespace);
@@ -681,6 +694,11 @@ class Conn {
         this.writeEmptyReply(msg.wait);
         msg.Event = exports.OnNamespaceConnected;
         fireEvent(ns, msg);
+        if (!isNull(this.waitServerConnectNotifiers) && this.waitServerConnectNotifiers.size > 0) {
+            if (this.waitServerConnectNotifiers.has(msg.Namespace)) {
+                this.waitServerConnectNotifiers.get(msg.Namespace)();
+            }
+        }
     }
     replyDisconnect(msg) {
         if (isEmpty(msg.wait) || msg.isNoOp) {
