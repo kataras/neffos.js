@@ -2,36 +2,50 @@
 // the good thing is that the node's WebSocket module has the same API as the browser's one,
 // so all works and minimum changes were required to achieve that result.
 // See the `genWait()` too.
-const isBrowser = (typeof window !== 'undefined')
-var WebSocket;
+const isBrowser = (typeof window !== 'undefined');
 if (!isBrowser) {
     WebSocket = require('ws');
 } else {
     WebSocket = window["WebSocket"];
 }
+
+// class Neffos {
+
+//     // Message = class {...} can work as well
+//     // but we have an issue on NSConn and Room, can't find the declaration,
+//     // so instead those will be exported by the exports/module.exports for nodejs
+//     // and root.neffos.==== for browser now that we can't use `export` keyword directly.
+//     constructor() { }
+
+//     // dial(...) => {...}
+// }
+
+// interface neffosGlobal extends NodeJS.Global {
+//     neffos: Neffos;
+// }
 //
 
 /* The WSData is just a string type alias. */
-export type WSData = string;
+type WSData = string;
 /* The OnNamespaceConnect is the event name that it's fired on before namespace connect. */
-export const OnNamespaceConnect = "_OnNamespaceConnect";
+const OnNamespaceConnect = "_OnNamespaceConnect";
 /* The OnNamespaceConnected is the event name that it's fired on after namespace connect. */
-export const OnNamespaceConnected = "_OnNamespaceConnected";
+const OnNamespaceConnected = "_OnNamespaceConnected";
 /* The OnNamespaceDisconnect is the event name that it's fired on namespace disconnected. */
-export const OnNamespaceDisconnect = "_OnNamespaceDisconnect";
+const OnNamespaceDisconnect = "_OnNamespaceDisconnect";
 /* The OnRoomJoin is the event name that it's fired on before room join. */
-export const OnRoomJoin = "_OnRoomJoin";
+const OnRoomJoin = "_OnRoomJoin";
 /* The OnRoomJoined is the event name that it's fired on after room join. */
-export const OnRoomJoined = "_OnRoomJoined";
+const OnRoomJoined = "_OnRoomJoined";
 /* The OnRoomLeave is the event name that it's fired on before room leave. */
-export const OnRoomLeave = "_OnRoomLeave";
+const OnRoomLeave = "_OnRoomLeave";
 /* The OnRoomLeft is the event name that it's fired on after room leave. */
-export const OnRoomLeft = "_OnRoomLeft";
+const OnRoomLeft = "_OnRoomLeft";
 /* The OnAnyEvent is the event name that it's fired, if no incoming event was registered, it's a "wilcard". */
-export const OnAnyEvent = "_OnAnyEvent";
+const OnAnyEvent = "_OnAnyEvent";
 /* The OnNativeMessage is the event name, which if registered on empty ("") namespace
    it accepts native messages(Message.Body and Message.IsNative is filled only). */
-export const OnNativeMessage = "_OnNativeMessage";
+const OnNativeMessage = "_OnNativeMessage";
 
 const ackBinary = 'M'; // see `onopen`, comes from client to server at startup.
 // see `handleAck`.
@@ -40,9 +54,10 @@ const ackNotOKBinary = 'H'; // comes from server to client if `Server#OnConnecte
 
 const waitIsConfirmationPrefix = '#';
 const waitComesFromClientPrefix = '$';
+
 /* The isSystemEvent reports whether the "event" is a system event;
-   connect, connected, disconnect, room join, room joined, room leave, room left. */
-export function isSystemEvent(event: string): boolean {
+connect, connected, disconnect, room join, room joined, room leave, room left. */
+function isSystemEvent(event: string): boolean {
     switch (event) {
         case OnNamespaceConnect:
         case OnNamespaceConnected:
@@ -76,8 +91,9 @@ function isEmpty(s: any): boolean {
 
     return false;
 }
+
 /* The Message is the structure which describes the icoming data (and if `Conn.Write` is manually used to write). */
-export class Message {
+class Message {
     wait: string;
     /* The Namespace that this message sent to. */
     Namespace: string;
@@ -243,7 +259,7 @@ function genEmptyReplyToWait(wait: string): string {
 /* The Room describes a connected connection to a room,
    emits messages with the `Message.Room` filled to the specific room
    and `Message.Namespace` to the underline `NSConn`'s namespace. */
-export class Room {
+class Room {
     nsConn: NSConn;
     name: string;
 
@@ -279,7 +295,7 @@ export class Room {
    it emits with the `Message.Namespace` filled and it can join to multiple rooms.
    A single Conn can be connected to one or more namespaces,
    each connected namespace is described by this class. */
-export class NSConn {
+class NSConn {
     /* The conn property refers to the main `Conn` constructed by the `dial` function. */
     conn: Conn;
     namespace: string;
@@ -484,11 +500,11 @@ export class NSConn {
    Its error can be written to the other side on specific events,
    i.e on `OnNamespaceConnect` it will abort a remote namespace connection.
    See examples for more. */
-export type MessageHandlerFunc = (c: NSConn, msg: Message) => Error;
+type MessageHandlerFunc = (c: NSConn, msg: Message) => Error;
 
 
-export type Events = Map<string, MessageHandlerFunc>
-export type Namespaces = Map<string, Events>;
+type Events = Map<string, MessageHandlerFunc>
+type Namespaces = Map<string, Events>;
 
 function fireEvent(ns: NSConn, msg: Message): Error {
     if (ns.events.has(msg.Event)) {
@@ -603,7 +619,7 @@ type waitingMessageFunc = (msg: Message) => void;
     nsConn.emit("chat", "Hello from client side!");
     See https://github.com/kataras/neffos.js/tree/master/_examples for more.
 */
-export function dial(endpoint: string, connHandler: any, protocols?: string[]): Promise<Conn> {
+function dial(endpoint: string, connHandler: any, protocols?: string[]): Promise<Conn> {
     if (endpoint.indexOf("ws") == -1) {
         endpoint = "ws://" + endpoint;
     }
@@ -620,7 +636,7 @@ export function dial(endpoint: string, connHandler: any, protocols?: string[]): 
         }
 
         let ws = new WebSocket(endpoint, protocols);
-        let conn = new Conn(ws, namespaces, protocols);
+        let conn = new Conn(ws, namespaces);
         ws.binaryType = "arraybuffer";
         ws.onmessage = ((evt: MessageEvent) => {
             let err = conn.handle(evt);
@@ -646,16 +662,16 @@ export function dial(endpoint: string, connHandler: any, protocols?: string[]): 
     });
 }
 
-export const ErrInvalidPayload = new Error("invalid payload");
-export const ErrBadNamespace = new Error("bad namespace");
-export const ErrBadRoom = new Error("bad room");
-export const ErrClosed = new Error("use of closed connection");
-export const ErrWrite = new Error("write closed");
+const ErrInvalidPayload = new Error("invalid payload");
+const ErrBadNamespace = new Error("bad namespace");
+const ErrBadRoom = new Error("bad room");
+const ErrClosed = new Error("use of closed connection");
+const ErrWrite = new Error("write closed");
 
 /* The Conn class contains the websocket connection and the neffos communication functionality.
    Its `connect` will return a new `NSConn` instance, each connection can connect to one or more namespaces.
    Each `NSConn` can join to multiple rooms. */
-export class Conn {
+class Conn {
     private conn: WebSocket;
 
     private _isAcknowledged: boolean;
@@ -672,7 +688,7 @@ export class Conn {
     private connectedNamespaces: Map<string, NSConn>;
     // private isConnectingProcesseses: string[]; // if elem exists then any receive of that namespace is locked until `askConnect` finished.
 
-    constructor(conn: WebSocket, namespaces: Namespaces, protocols?: string[]) {
+    constructor(conn: WebSocket, namespaces: Namespaces) {
         this.conn = conn;
         this._isAcknowledged = false;
         this.namespaces = namespaces
@@ -884,7 +900,6 @@ export class Conn {
 
             msg.wait = genWait();
 
-
             this.waitingMessages.set(msg.wait, ((receive: Message): void => {
                 if (receive.isError) {
                     reject(new Error(receive.Err));
@@ -1040,3 +1055,53 @@ export class Conn {
         this.closed = true;
     }
 }
+
+(function () {
+    // interface Neffos {
+    //     dial(...)
+    // }
+
+
+    // const neffos: Neffos = {
+    //    dial:dial,
+    // }
+
+
+    const neffos = {
+        // main functions.
+        dial: dial,
+        isSystemEvent: isSystemEvent,
+        // constants (events).
+        OnNamespaceConnect: OnNamespaceConnect,
+        OnNamespaceConnected: OnNamespaceConnected,
+        OnNamespaceDisconnect: OnNamespaceDisconnect,
+        OnRoomJoin: OnRoomJoin,
+        OnRoomJoined: OnRoomJoined,
+        OnRoomLeave: OnRoomLeave,
+        OnRoomLeft: OnRoomLeft,
+        OnAnyEvent: OnAnyEvent,
+        OnNativeMessage: OnNativeMessage,
+        // classes.
+        Message: Message,
+        Room: Room,
+        NSConn: NSConn,
+        Conn: Conn,
+        // errors.
+        ErrInvalidPayload: ErrInvalidPayload,
+        ErrBadNamespace: ErrBadNamespace,
+        ErrBadRoom: ErrBadRoom,
+        ErrClosed: ErrClosed,
+        ErrWrite: ErrWrite
+    }
+
+    if (typeof exports !== 'undefined') {
+        exports = neffos;
+        module.exports = neffos
+    } else {
+        var root = typeof self == 'object' && self.self === self && self ||
+            typeof global == 'object' && global.global === global && global;
+
+        // as a browser global.
+        root["neffos"] = neffos;
+    }
+}());

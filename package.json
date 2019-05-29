@@ -1,6 +1,6 @@
 {
     "name": "neffos.js",
-    "version": "0.1.7",
+    "version": "0.1.8",
     "description": "javascript client for the modern neffos websocket framework",
     "keywords": [
         "neffos",
@@ -11,11 +11,9 @@
         "iris"
     ],
     "scripts": {
-        "toJS": "tsc --target es6 -module commonjs --sourceMap --outDir ./dist ./src/neffos.ts",
-        "minifyES6": "minify ./dist/neffos.js --outFile ./dist/neffos.min.js",
-        "toBrowser": "browserify ./dist/neffos.js -o ./dist/neffos.browser.js",
-        "minifyBrowserES6": "minify ./dist/neffos.browser.js --outFile ./dist/neffos.browser.js",
-        "build": "npm run-script toJS && npm run-script minifyES6 && npm run-script toBrowser && npm run-script minifyBrowserES6",
+        "toJS": "tsc --target es5 -module commonjs --sourceMap --outDir ./dist ./src/neffos.ts",
+        "minify": "minify ./dist/neffos.js --outFile ./dist/neffos.min.js",
+        "build": "npm run-script toJS && npm run-script minify",
         "lint": "node_modules/.bin/goodparts path/to/files/for/linting ./dist"
     },
     "source": "./src/neffos.ts",
@@ -41,11 +39,10 @@
         }
     ],
     "devDependencies": {
-        "typescript": "^3.4.5",
-        "@types/node": "^12.0.2",
-        "browserify": "^16.2.3",
+        "@types/node": "^12.0.3",
         "babel-minify": "^0.5.0",
-        "goodparts": "^1.2.1"
+        "goodparts": "^1.2.1",
+        "typescript": "^3.4.5"
     },
     "dependencies": {
         "ws": "^7.0.0"
