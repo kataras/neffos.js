@@ -118,8 +118,11 @@ func server(upgrader neffos.Upgrader) {
 
 	mux := http.NewServeMux()
 	mux.Handle("/echo", srv)
-	mux.Handle("/", http.FileServer(http.Dir("./browser")))
-	mux.Handle("/es6", http.FileServer(http.Dir("./browser-es6")))
+
+	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "./browser/index.html")
+	}))
+	mux.Handle("/browserify/", http.StripPrefix("/browserify", http.FileServer(http.Dir("./browserify"))))
 
 	log.Printf("Listening on: %s\nPress CTRL/CMD+C to interrupt.", endpoint)
 	go http.ListenAndServe(endpoint, mux)

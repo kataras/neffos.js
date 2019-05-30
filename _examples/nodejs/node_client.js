@@ -3,34 +3,24 @@ const neffos = require('neffos.js');
 const stdin = process.openStdin();
 
 const wsURL = "ws://localhost:8080/echo";
+
 async function runExample() {
   try {
-    var conn = await neffos.dial(wsURL, {
+    const conn = await neffos.dial(wsURL, {
       default: { // "default" namespace.
-        _OnNamespaceConnected: function (ns, msg) {
+        _OnNamespaceConnected: function (nsConn, msg) {
           console.log("connected to namespace: " + msg.Namespace);
         },
-        _OnNamespaceDisconnect: function (ns, msg) {
+        _OnNamespaceDisconnect: function (nsConn, msg) {
           console.log("disconnected from namespace: " + msg.Namespace);
         },
-        _OnRoomJoined: function (ns, msg) {
-          console.log("joined to room: " + msg.Room);
-        },
-        _OnRoomLeft: function (ns, msg) {
-          console.log("left from room: " + msg.Room);
-        },
-        chat: function (ns, msg) { // "chat" event.
-          let prefix = "Server says: ";
-
-          if (msg.Room !== "") {
-            prefix = msg.Room + " >> ";
-          }
-          console.log(prefix + msg.Body);
+        chat: function (nsConn, msg) { // "chat" event.
+          console.log(msg.Body);
         }
       }
     });
 
-    var nsConn = await conn.connect("default");
+    const nsConn = await conn.connect("default");
     nsConn.emit("chat", "Hello from client side!");
 
     stdin.addListener("data", function (data) {
