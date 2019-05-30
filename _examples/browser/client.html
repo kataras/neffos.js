@@ -54,13 +54,6 @@
     }).catch(logError);
 
     function handleNamespaceConnectedConn(nsConn) {
-        // Note that if ../server.go#serverHandlesConnectNamespace===true then you can still use the `connect` on the javascript library
-        // but if you don't want to send a payload and just block for a connection use the `waitServerConnect` instead:
-        // let nsConn = await conn.waitServerConnect("default");
-        //
-        // Also, you can omit the `await` and let it happen async way,
-        // but you'll need to move the rest of the code on the _OnNamespaceConnected event instead
-        // in order to have access to the "nsConn".
         let joinedRoom = "";
         let exampleRoomName = "room1";
 
