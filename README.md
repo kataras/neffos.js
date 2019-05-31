@@ -8,13 +8,35 @@ It can run through any modern [browser](_examples/browser), [browserify](_exampl
 
 ## Installation
 
+### node.js
+
 ```sh
-$ npm install --save neffos.js@latest
+$ npm install neffos.js [--save --save-prefix=~]
 ```
 
 ```js
 const neffos = require('neffos.js');
 ```
+
+**Note** that this library's versioning scheme is not semver-compatible for historical reasons. For guaranteed backward compatibility, always depend on ~X.X.X instead of ^X.X.X (hence the --save-prefix above).
+
+### Browsers
+
+Development:
+
+```html
+<script src="//cdn.jsdelivr.net/npm/neffos.js@X.X.X/dist/neffos.js"></script>
+```
+
+Production:
+
+```html
+<script src="//cdn.jsdelivr.net/npm/neffos.js@X.X.X/dist/neffos.min.js"></script>
+```
+
+**Remember** to replace the version tag with the exact release your project depends upon.
+
+The library supports CommonJS loader and also exports globally as `neffos`.
 
 See [_examples](_examples) for more.
 

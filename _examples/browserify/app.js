@@ -35,6 +35,7 @@ async function runExample() {
       default: { // "default" namespace.
         _OnNamespaceConnected: function (nsConn, msg) {
           addMessage("connected to namespace: " + msg.Namespace);
+          handleNamespaceConnectedConn(nsConn);
         },
         _OnNamespaceDisconnect: function (nsConn, msg) {
           addMessage("disconnected from namespace: " + msg.Namespace);
@@ -45,8 +46,11 @@ async function runExample() {
       }
     });
 
-    const nsConn = await conn.connect("default");
-    handleNamespaceConnectedConn(nsConn);
+    // You can either wait to conenct or just conn.connect("connect")
+    // and put the `handleNamespaceConnectedConn` inside `_OnNamespaceConnected` callback instead.
+    // const nsConn = await conn.connect("default");
+    // handleNamespaceConnectedConn(nsConn);
+    conn.connect("default");
 
   } catch (err) {
     handleError(err);
