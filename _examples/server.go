@@ -139,7 +139,7 @@ func server(upgrader neffos.Upgrader) {
 		if bytes.Equal(text, []byte("force disconnect")) {
 			srv.Do(func(c *neffos.Conn) {
 				c.DisconnectAll(nil)
-			})
+			}, false)
 		} else {
 			srv.Broadcast(nil, neffos.Message{Namespace: namespace, Event: "chat", Body: text})
 		}
