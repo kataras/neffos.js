@@ -104,6 +104,9 @@ function isEmpty(s) {
 var Message = /** @class */ (function () {
     function Message() {
     }
+    /* The SetBinary can be filled to true if the client must send this message using the Binary format message.
+       This field is not filled on sending/receiving. */
+    // SetBinary: boolean;
     Message.prototype.isConnect = function () {
         return this.Event == OnNamespaceConnect || false;
     };
@@ -922,6 +925,22 @@ var Conn = /** @class */ (function () {
                 }
             }
         }
+        // if (msg.SetBinary) {
+        //     if (!("TextEncoder" in window)) {
+        //         throw new Error("this browser does not support Text Encoding/Decoding...");
+        //     }
+        //     (msg.Body as unknown) = new TextEncoder().encode(msg.Body);
+        // }
+        // this.conn.send(serializeMessage(msg));
+        //
+        // var data:string|Uint8Array = serializeMessage(msg)
+        // if (msg.SetBinary) {
+        //     if (!("TextEncoder" in window)) {
+        //         throw new Error("this browser does not support Text Encoding/Decoding...");
+        //     }
+        //     data = new TextEncoder().encode(data);
+        // }
+        // this.conn.send(data);
         this.conn.send(serializeMessage(msg));
         return true;
     };

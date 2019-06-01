@@ -38,12 +38,11 @@ Production:
 
 The library supports CommonJS loader and also exports globally as `neffos`.
 
-See [_examples](_examples) for more.
+See [./_examples](_examples) for basic usage, and [kataras/neffos/_examples](https://github.com/kataras/neffos/tree/master/_examples) for extensive use.
 
 ## Install definition file
 
 `neffos.js` definition file for javascript developers is part of the [DefinitelyTyped](https://www.npmjs.com/package/@types/neffos.js). 
-
 
 ```sh
 $ npm i @types/neffos.js
