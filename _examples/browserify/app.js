@@ -40,6 +40,11 @@ async function runExample() {
         _OnNamespaceDisconnect: function (nsConn, msg) {
           addMessage("disconnected from namespace: " + msg.Namespace);
         },
+        _OnAnyEvent: function (nsConn, msg) { // any event.
+          if (!neffos.isSystemEvent(msg.Event)) {
+            console.log(msg);
+          }
+        },
         chat: function (nsConn, msg) { // "chat" event.
           addMessage(msg.Body);
         }

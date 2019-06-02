@@ -92,7 +92,7 @@ function isEmpty(s) {
     if (s === null) {
         return true;
     }
-    if (typeof s === 'string' || s instanceof String) {
+    if (s == "" || typeof s === 'string' || s instanceof String) {
         return s.length === 0 || s === "";
     }
     if (s instanceof Error) {
@@ -130,10 +130,26 @@ var Message = /** @class */ (function () {
     };
     return Message;
 }());
+/* Obsiously, the below should match the server's side. */
 var messageSeparator = ';';
+var messageFieldSeparatorReplacement = "@%!semicolon@%!";
 var validMessageSepCount = 7;
 var trueString = "1";
 var falseString = "0";
+var escapeRegExp = new RegExp(messageSeparator, "g");
+function escapeMessageField(s) {
+    if (isEmpty(s)) {
+        return "";
+    }
+    return s.replace(escapeRegExp, messageFieldSeparatorReplacement);
+}
+var unescapeRegExp = new RegExp(messageFieldSeparatorReplacement, "g");
+function unescapeMessageField(s) {
+    if (isEmpty(s)) {
+        return "";
+    }
+    return s.replace(unescapeRegExp, messageSeparator);
+}
 function serializeMessage(msg) {
     if (msg.IsNative && isEmpty(msg.wait)) {
         return msg.Body;
@@ -150,13 +166,27 @@ function serializeMessage(msg) {
     }
     return [
         msg.wait || "",
-        msg.Namespace,
-        msg.Room || "",
-        msg.Event || "",
+        escapeMessageField(msg.Namespace),
+        escapeMessageField(msg.Room),
+        escapeMessageField(msg.Event),
         isErrorString,
         isNoOpString,
         body
     ].join(messageSeparator);
+}
+// behaves like Go's SplitN, default javascript's does not return the remainder and we need this for the dts[6]
+function splitN(s, sep, limit) {
+    if (limit == 0)
+        return [s];
+    var arr = s.split(sep, limit);
+    if (arr.length == limit) {
+        var curr = arr.join(sep) + sep;
+        arr.push(s.substr(curr.length));
+        return arr;
+    }
+    else {
+        return [s];
+    }
 }
 // <wait>;
 // <namespace>;
@@ -171,7 +201,7 @@ function deserializeMessage(data, allowNativeMessages) {
         msg.isInvalid = true;
         return msg;
     }
-    var dts = data.split(messageSeparator, validMessageSepCount);
+    var dts = splitN(data, messageSeparator, validMessageSepCount - 1);
     if (dts.length != validMessageSepCount) {
         if (!allowNativeMessages) {
             msg.isInvalid = true;
@@ -183,9 +213,9 @@ function deserializeMessage(data, allowNativeMessages) {
         return msg;
     }
     msg.wait = dts[0];
-    msg.Namespace = dts[1];
-    msg.Room = dts[2];
-    msg.Event = dts[3];
+    msg.Namespace = unescapeMessageField(dts[1]);
+    msg.Room = unescapeMessageField(dts[2]);
+    msg.Event = unescapeMessageField(dts[3]);
     msg.isError = dts[4] == trueString || false;
     msg.isNoOp = dts[5] == trueString || false;
     var body = dts[6];
