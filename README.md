@@ -11,14 +11,12 @@ It can run through any modern [browser](_examples/browser), [browserify](_exampl
 ### node.js
 
 ```sh
-$ npm install neffos.js [--save --save-prefix=~]
+$ npm install --save neffos.js
 ```
 
 ```js
 const neffos = require('neffos.js');
 ```
-
-**Note** that this library's versioning scheme is not semver-compatible for historical reasons. For guaranteed backward compatibility, always depend on ~X.X.X instead of ^X.X.X (hence the --save-prefix above).
 
 ### Browsers
 
@@ -38,12 +36,24 @@ Production:
 
 The library supports CommonJS loader and also exports globally as `neffos`.
 
-See [./_examples](_examples) for basic usage, and [kataras/neffos/_examples](https://github.com/kataras/neffos/tree/master/_examples) for extensive use.
+**Navigate** through [./_examples](_examples) for basic usage, and [kataras/neffos/_examples](https://github.com/kataras/neffos/tree/master/_examples) for extensive use.
 
-## Install definition file
+## Install Definition File
 
-`neffos.js` definition file for javascript developers is part of the [DefinitelyTyped](https://www.npmjs.com/package/@types/neffos.js). 
+`neffos.d.ts` definition file for javascript developers is part of the [DefinitelyTyped](https://www.npmjs.com/package/@types/neffos.js). 
 
 ```sh
 $ npm i @types/neffos.js
 ```
+
+This libray is written in [Typescript](https://www.typescriptlang.org/) and the `neffos.d.ts` definition file is part of the `npm install`. The library offers full documentation of all of its exported methods. Tools like [VS Code](https://code.visualstudio.com/) supports syntax highlighting and autocompletion while typing. The definition file can be very helpful mostly for Pure JavaScript developers.
+
+## Versioning
+
+[![Node version](https://img.shields.io/npm/v/neffos.js.svg?style=flat-square)](https://www.npmjs.com/package/neffos.js)
+
+Read more about Semantic Versioning 2.0.0
+
+ - http://semver.org/
+ - https://en.wikipedia.org/wiki/Software_versioning
+ - https://wiki.debian.org/UpstreamGuide#Releases_and_Versions
