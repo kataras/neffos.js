@@ -47,7 +47,19 @@ export class Message {
   IsLocal: boolean;
   /* The IsNative reports whether the Message is websocket native messages, only Body is filled. */
   IsNative: boolean;
+
+  /* unmarshal method returns this Message's `Body` as an object,
+     equivalent to the Go's `neffos.Message.Unmarshal` method.
+     It can be used inside an event's callbacks.
+     See library-level `marshal` function too. */
+     unmarshal(): any;
 }
+
+/* marshal takes an object and returns its serialized to string form, equivalent to the Go's `neffos.Marshal`.
+   It can be used on `emit` methods.   
+   See `Message.unmarshal` method too. */
+export function marshal(obj: any): string
+
 /* The Room describes a connected connection to a room,
    emits messages with the `Message.Room` filled to the specific room
    and `Message.Namespace` to the underline `NSConn`'s namespace. */

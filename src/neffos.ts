@@ -148,13 +148,27 @@ class Message {
         }
 
         if (this.wait[0] == waitIsConfirmationPrefix) {
-            return true
+            return true;
         }
 
         return this.wait[0] == waitComesFromClientPrefix || false;
     }
+
+    /* unmarshal method returns this Message's `Body` as an object,
+       equivalent to the Go's `neffos.Message.Unmarshal` method.
+       It can be used inside an event's callbacks.
+       See library-level `marshal` function too. */
+    unmarshal(): any {
+        return JSON.parse(this.Body);
+    }
 }
 
+/* marshal takes an object and returns its serialized to string form, equivalent to the Go's `neffos.Marshal`.
+   It can be used on `emit` methods.   
+   See `Message.unmarshal` method too. */
+function marshal(obj: any): string {
+    return JSON.stringify(obj);
+}
 
 /* Obsiously, the below should match the server's side. */
 const messageSeparator = ';';
@@ -197,7 +211,7 @@ function serializeMessage(msg: Message): WSData {
     }
 
     if (msg.isNoOp) {
-        isNoOpString = trueString
+        isNoOpString = trueString;
     }
 
     return [
@@ -395,7 +409,7 @@ class NSConn {
             try {
                 await this.askRoomLeave(leaveMsg);
             } catch (err) {
-                return err
+                return err;
             }
         })
 
@@ -1022,7 +1036,7 @@ class Conn {
 
         this.connectedNamespaces.delete(msg.Namespace);
 
-        msg.IsLocal = true
+        msg.IsLocal = true;
         return fireEvent(ns, msg);
     }
 
@@ -1147,7 +1161,8 @@ class Conn {
         ErrBadNamespace: ErrBadNamespace,
         ErrBadRoom: ErrBadRoom,
         ErrClosed: ErrClosed,
-        ErrWrite: ErrWrite
+        ErrWrite: ErrWrite,
+        marshal: marshal
     }
 
     if (typeof exports !== 'undefined') {

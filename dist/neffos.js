@@ -128,8 +128,21 @@ var Message = /** @class */ (function () {
         }
         return this.wait[0] == waitComesFromClientPrefix || false;
     };
+    /* unmarshal method returns this Message's `Body` as an object,
+       equivalent to the Go's `neffos.Message.Unmarshal` method.
+       It can be used inside an event's callbacks.
+       See library-level `marshal` function too. */
+    Message.prototype.unmarshal = function () {
+        return JSON.parse(this.Body);
+    };
     return Message;
 }());
+/* marshal takes an object and returns its serialized to string form, equivalent to the Go's `neffos.Marshal`.
+   It can be used on `emit` methods.
+   See `Message.unmarshal` method too. */
+function marshal(obj) {
+    return JSON.stringify(obj);
+}
 /* Obsiously, the below should match the server's side. */
 var messageSeparator = ';';
 var messageFieldSeparatorReplacement = "@%!semicolon@%!";
@@ -1033,7 +1046,8 @@ var Conn = /** @class */ (function () {
         ErrBadNamespace: ErrBadNamespace,
         ErrBadRoom: ErrBadRoom,
         ErrClosed: ErrClosed,
-        ErrWrite: ErrWrite
+        ErrWrite: ErrWrite,
+        marshal: marshal
     };
     if (typeof exports !== 'undefined') {
         exports = neffos;
