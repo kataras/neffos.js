@@ -36,8 +36,6 @@ Production:
 
 The library supports CommonJS loader and also exports globally as `neffos`.
 
-**Navigate** through [./_examples](_examples) for basic usage, and [kataras/neffos/_examples](https://github.com/kataras/neffos/tree/master/_examples) for extensive use.
-
 ## Install Definition File
 
 `neffos.d.ts` definition file for javascript developers is part of the [DefinitelyTyped](https://www.npmjs.com/package/@types/neffos.js). 
@@ -47,6 +45,12 @@ $ npm i @types/neffos.js
 ```
 
 This libray is written in [Typescript](https://www.typescriptlang.org/) and the `neffos.d.ts` definition file is part of the `npm install`. The library offers full documentation of all of its exported methods. Tools like [VS Code](https://code.visualstudio.com/) supports syntax highlighting and autocompletion while typing. The definition file can be very helpful mostly for Pure JavaScript developers.
+
+## Documentation
+
+**Navigate** through [./_examples](_examples) for basic usage, and [kataras/neffos/_examples](https://github.com/kataras/neffos/tree/master/_examples) for extensive use.
+
+[![](ascii_outline.png)](ascii_outline.txt)
 
 ## Versioning
 
