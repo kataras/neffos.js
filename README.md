@@ -50,48 +50,6 @@ This libray is written in [Typescript](https://www.typescriptlang.org/) and the 
 
 **Navigate** through [./_examples](_examples) for basic usage, and [kataras/neffos/_examples](https://github.com/kataras/neffos/tree/master/_examples) for extensive use.
 
-<pre>
-+-----------------------+
-|                       |                           +----------------------------+
-|        Conn           +---------------------------+.ID                         |
-|                       |                           |.write(Message {...} )      |
-+----------+------------+                           |.ask  (Message {...} )      |
-           |                                        +----------------------------+
-           |                                        |.close   ()                 |
-           |                                        |.isClosed()                 |
-           |                                        +----------------------------+
-           +----------------------+                 |.waitServerConnect()        |
-           |.connect("namespace") |                 |.namespace    ("namespace") |
-           +-----+----------------+                 |.disconnectAll()            |
-                 |                                  +----------------------------+
-                 |
-                 |
-                 |                                                                      +--------------------------+
-           +-----+----------------+                                                     | Message {                |
-           |                      |                 +----------------------------+      |                          |
-           |       NSConn         +-----------------+.emit("event", body)        +------+  Namespace: "namespace", |
-           |                      |                 +----------------------------+      |  Event:     "event",     |
-           +-----+----------------+                 |.disconnect()               |      |  Body:      body,        |
-                 |                                  +----------------------------+      |                          |
-                 |                                  |.ask     ("event", body)    |      | }                        |
-                 |                                  |.room    ("roomName")       |      +--------------------------+
-                 +----------------------+           |.rooms                      |
-                 |.joinRoom("roomName") |           |.leaveAll()                 |
-                 +-------+--------------+           +----------------------------+
-                         |
-                         |
-                         |                                                              +--------------------------+
-                         |                                                              | Message {                |
-                 +-------+--------------+                                               |                          |
-                 |                      |           +----------------------------+      |  Namespace: "namespace", |
-                 |         Room         +-----------+.emit("event", body)        +------+  Room:      "roomName",  |
-                 |                      |           +----------------------------+      |  Event:     "event",     |
-                 +----------------------+           |.leave()                    |      |  Body:      body,        |
-                                                    +----------------------------+      |                          |
-                                                                                        | }                        |
-                                                                                        +--------------------------+
-
-</pre>
 [![](ascii_outline.png)](ascii_outline.txt)
 
 ## Versioning
