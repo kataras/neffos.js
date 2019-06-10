@@ -49,7 +49,7 @@ async function runExample() {
           addMessage(msg.Body);
         }
       }
-    });
+    }/* , new neffos.Options().header("X-Username", "a username") // sets custom headers. */);
 
     // You can either wait to conenct or just conn.connect("connect")
     // and put the `handleNamespaceConnectedConn` inside `_OnNamespaceConnected` callback instead.
