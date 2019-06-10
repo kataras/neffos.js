@@ -18,11 +18,11 @@ async function runExample() {
           console.log(msg.Body);
         }
       }
-    }, /* set custom headers:  {
+    }/*, {
         headers: {
           'X-Username': 'kataras',
         }
-      }*/);
+      } // sets custom headers. */);
 
     const nsConn = await conn.connect("default");
     nsConn.emit("chat", "Hello from client side!");

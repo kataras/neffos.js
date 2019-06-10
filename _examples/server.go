@@ -81,6 +81,13 @@ var (
 func server(upgrader neffos.Upgrader) {
 	srv := neffos.New(upgrader, handler)
 
+	// srv.IDGenerator = func(w http.ResponseWriter, r *http.Request) string {
+	// 	for k, v := range r.Header {
+	// 		log.Printf("%s=%s\n", k, v)
+	// 	}
+	// 	return neffos.DefaultIDGenerator(w, r)
+	// }
+
 	srv.OnConnect = func(c *neffos.Conn) error {
 		if dissalowAll {
 			return fmt.Errorf("you are not allowed to connect here for some reason")

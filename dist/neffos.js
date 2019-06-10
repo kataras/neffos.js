@@ -581,43 +581,23 @@ function getEvents(namespaces, namespace) {
  The server's `URLParamAsHeaderPrefix` must match.
  Note that on the Nodejs side this is entirely optional, nodejs and go client support custom headers without url parameters parsing. */
 var URLParamAsHeaderPrefix = "X-Websocket-Header-";
-/* Options contains optional fields. Can be passed on the `dial` function. */
-var Options = /** @class */ (function () {
-    function Options() {
+function parseHeadersAsURLParameters(headers, url) {
+    if (isNull(headers)) {
+        return url;
     }
-    Options.prototype.header = function (key, value) {
-        if (isNull(this.headers)) {
-            this.headers = new Map();
-        }
-        key = encodeURIComponent(URLParamAsHeaderPrefix + key);
-        value = encodeURIComponent(value);
-        this.headers.set(key, value);
-        return this;
-    };
-    /* If any of the values in protocols occur more than once or otherwise fail to match the requirements
-    for elements that comprise the value of Sec-WebSocket-Protocol fields as defined by The WebSocket protocol,
-    then the client will throw a "SyntaxError" DOMException. */
-    Options.prototype.protocol = function (s) {
-        if (isNull(this.Protocols)) {
-            this.Protocols = new Array();
-        }
-        this.Protocols.push(s);
-        return this;
-    };
-    Options.prototype.hasHeaders = function () {
-        return (!isNull(this.headers) && this.headers.size > 0);
-    };
-    Options.prototype.buildURI = function (url) {
-        this.headers.forEach(function (value, key) {
+    for (var key in headers) {
+        if (headers.hasOwnProperty(key)) {
+            var value = headers[key];
+            key = encodeURIComponent(URLParamAsHeaderPrefix + key);
+            value = encodeURIComponent(value);
             var part = key + "=" + value;
             url = (url.indexOf("?") != -1 ?
                 url.split("?")[0] + "?" + part + "&" + url.split("?")[1] :
                 (url.indexOf("#") != -1 ? url.split("#")[0] + "?" + part + "#" + url.split("#")[1] : url + '?' + part));
-        });
-        return url;
-    };
-    return Options;
-}());
+        }
+    }
+    return url;
+}
 /* The dial function returns a neffos client, a new `Conn` instance.
    First parameter is the endpoint, i.e ws://localhost:8080/echo,
    the second parameter can be any object of the form of:
@@ -663,22 +643,20 @@ function dial(endpoint, connHandler, options) {
         if (isNull(namespaces)) {
             return;
         }
-        if (isBrowser && !isNull(options)) {
-            endpoint = options.buildURI(endpoint);
-        }
         var ws;
         if (isBrowser) {
-            if (!isNull(options)) {
-                endpoint = options.buildURI(endpoint);
+            if (!isNull(options) && options.headers) {
+                console.log(options);
+                endpoint = parseHeadersAsURLParameters(options.headers, endpoint);
+                if (options.protocols) {
+                    options = options.protocols;
+                }
+                else {
+                    options = undefined;
+                }
             }
-            ws = new WebSocket(endpoint, options.Protocols);
         }
-        else {
-            // If nodejs then let it pass as it's;
-            // As CoreOptions (from nodejs request module):
-            // https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/request/index.d.ts#L143
-            ws = new WebSocket(endpoint, options);
-        }
+        ws = new WebSocket(endpoint, options);
         var conn = new Conn(ws, namespaces);
         ws.binaryType = "arraybuffer";
         ws.onmessage = (function (evt) {
@@ -1080,7 +1058,6 @@ var Conn = /** @class */ (function () {
     // }
     var neffos = {
         // main functions.
-        Options: Options,
         dial: dial,
         isSystemEvent: isSystemEvent,
         // constants (events).

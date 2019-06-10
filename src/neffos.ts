@@ -642,48 +642,39 @@ type waitingMessageFunc = (msg: Message) => void;
  Note that on the Nodejs side this is entirely optional, nodejs and go client support custom headers without url parameters parsing. */
 const URLParamAsHeaderPrefix = "X-Websocket-Header-"
 
+
+interface Headers {
+    [key: string]: any;
+}
+
 /* Options contains optional fields. Can be passed on the `dial` function. */
-class Options {
-    private headers: Map<string, string>;
-    Protocols: string[];
+interface Options {
+    // If nodejs then let it pass as it's;
+    // As CoreOptions (from nodejs request module):
+    // https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/request/index.d.ts#L143
+    headers?: Headers;
+    //
+    protocols?: string[];
+}
 
-    header(key: string, value: string): Options {
-        if (isNull(this.headers)) {
-            this.headers = new Map<string, string>();
-        }
-
-        key = encodeURIComponent(URLParamAsHeaderPrefix + key); value = encodeURIComponent(value);
-
-        this.headers.set(key, value);
-        return this;
+function parseHeadersAsURLParameters(headers: Headers, url: string): string {
+    if (isNull(headers)) {
+        return url;
     }
 
-    /* If any of the values in protocols occur more than once or otherwise fail to match the requirements
-    for elements that comprise the value of Sec-WebSocket-Protocol fields as defined by The WebSocket protocol,
-    then the client will throw a "SyntaxError" DOMException. */
-    protocol(s: string): Options {
-        if (isNull(this.Protocols)) {
-            this.Protocols = new Array<string>();
-        }
+    for (let key in headers) {
+        if (headers.hasOwnProperty(key)) {
+            let value = headers[key];
+            key = encodeURIComponent(URLParamAsHeaderPrefix + key); value = encodeURIComponent(value);
 
-        this.Protocols.push(s);
-        return this;
-    }
-
-    hasHeaders(): boolean {
-        return (!isNull(this.headers) && this.headers.size > 0);
-    }
-
-    buildURI(url: string): string {
-        this.headers.forEach((value: string, key: string) => {
             const part = key + "=" + value;
             url = (url.indexOf("?") != -1 ?
                 url.split("?")[0] + "?" + part + "&" + url.split("?")[1] :
                 (url.indexOf("#") != -1 ? url.split("#")[0] + "?" + part + "#" + url.split("#")[1] : url + '?' + part));
-        })
-
-        return url;
+        }
     }
+
+    return url;
 }
 
 /* The dial function returns a neffos client, a new `Conn` instance.
@@ -719,7 +710,7 @@ class Options {
     nsConn.emit("chat", "Hello from client side!");
     See https://github.com/kataras/neffos.js/tree/master/_examples for more.
 */
-function dial(endpoint: string, connHandler: any, options?: Options|any): Promise<Conn> {
+function dial(endpoint: string, connHandler: any, options?: Options | any): Promise<Conn> {
     if (endpoint.indexOf("ws") == -1) {
         endpoint = "ws://" + endpoint;
     }
@@ -735,24 +726,20 @@ function dial(endpoint: string, connHandler: any, options?: Options|any): Promis
             return;
         }
 
-        if (isBrowser && !isNull(options)) {
-            endpoint = options.buildURI(endpoint);
-        }
-
         let ws: WebSocket;
 
         if (isBrowser) {
-            if (!isNull(options)) {
-                endpoint = options.buildURI(endpoint);
+            if (!isNull(options) && options.headers) {
+                endpoint = parseHeadersAsURLParameters(options.headers, endpoint);
+                if (options.protocols) {
+                    options = options.protocols;
+                }else{
+                    options = undefined;
+                }
             }
-
-            ws = new WebSocket(endpoint, options.Protocols);
-        } else {
-            // If nodejs then let it pass as it's;
-            // As CoreOptions (from nodejs request module):
-            // https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/request/index.d.ts#L143
-            ws = new WebSocket(endpoint, options as any);
         }
+
+        ws = new WebSocket(endpoint, options);
 
         let conn = new Conn(ws, namespaces);
         ws.binaryType = "arraybuffer";
@@ -1206,7 +1193,6 @@ class Conn {
 
     const neffos = {
         // main functions.
-        Options: Options,
         dial: dial,
         isSystemEvent: isSystemEvent,
         // constants (events).
