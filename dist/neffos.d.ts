@@ -52,7 +52,7 @@ export class Message {
      equivalent to the Go's `neffos.Message.Unmarshal` method.
      It can be used inside an event's callbacks.
      See library-level `marshal` function too. */
-     unmarshal(): any;
+  unmarshal(): any;
 }
 
 /* marshal takes an object and returns its serialized to string form, equivalent to the Go's `neffos.Marshal`.
@@ -110,6 +110,25 @@ export type MessageHandlerFunc = (c: NSConn, msg: Message) => Error;
 export type Events = Map<string, MessageHandlerFunc>
 export type Namespaces = Map<string, Events>;
 
+/* This is the prefix that Options.header function is set to a url parameter's key in order to serve to parse it as header.
+ The server's `URLParamAsHeaderPrefix` must match.
+ Note that on the Nodejs side this is entirely optional, nodejs and go client support custom headers without url parameters parsing. */
+export const URLParamAsHeaderPrefix = "X-Websocket-Header-"
+
+/* Options contains optional fields. Can be passed on the `dial` function. */
+export class Options {
+  private headers: Map<string, string>;
+  Protocols: string[];
+
+  header(key: string, value: string): Options;
+  /* If any of the values in protocols occur more than once or otherwise fail to match the requirements
+  for elements that comprise the value of Sec-WebSocket-Protocol fields as defined by The WebSocket protocol,
+  then the client will throw a "SyntaxError" DOMException. */
+  protocol(s: string): Options;
+  hasHeaders(): boolean;
+  buildURI(url: string): string;
+}
+
 /* The dial function returns a neffos client, a new `Conn` instance.
    First parameter is the endpoint, i.e ws://localhost:8080/echo,
    the second parameter can be any object of the form of:
@@ -143,7 +162,7 @@ export type Namespaces = Map<string, Events>;
     nsConn.emit("chat", "Hello from client side!");
     See https://github.com/kataras/neffos.js/tree/master/_examples for more.
 */
-export function dial(endpoint: string, connHandler: any, protocols?: string[]): Promise<Conn>;
+export function dial(endpoint: string, connHandler: any, options?: Options|any): Promise<Conn>;
 
 export const ErrInvalidPayload: Error;
 export const ErrBadNamespace: Error;
