@@ -1,5 +1,6 @@
-/// <reference path="../../dist/neffos.d.ts" />
+/// <reference path="../../types/index.d.ts" />
 const neffos = require('neffos.js');
+
 const stdin = process.openStdin();
 
 const wsURL = "ws://localhost:8080/echo";

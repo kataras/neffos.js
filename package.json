@@ -13,11 +13,12 @@
     "scripts": {
         "toJS": "tsc --target es5 -module commonjs --sourceMap --outDir ./dist ./src/neffos.ts",
         "minify": "minify ./dist/neffos.js --outFile ./dist/neffos.min.js",
-        "build": "npm run-script toJS && npm run-script minify",
-        "lint": "node_modules/.bin/goodparts path/to/files/for/linting ./dist"
+        "dtslint": "dtslint --onlyTestTsNext ./types",
+        "build": "npm run-script dtslint && npm run-script toJS && npm run-script minify",
+        "lint": "node_modules/.bin/goodparts ./src"
     },
     "source": "./src/neffos.ts",
-    "types": "./dist/neffos.d.ts",
+    "types": "./types/index.d.ts",
     "main": "./dist/neffos.js",
     "files": [
         "LICENSE",
@@ -41,6 +42,7 @@
     "devDependencies": {
         "@types/node": "^12.0.3",
         "babel-minify": "^0.5.0",
+        "dtslint": "^0.8.0",
         "goodparts": "^1.2.1",
         "typescript": "^3.4.5"
     },
