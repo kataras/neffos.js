@@ -120,6 +120,10 @@ func server(upgrader neffos.Upgrader) {
 	}
 
 	srv.OnUpgradeError = func(err error) {
+		if retries, ok := neffos.IsTryingToReconnect(err); ok {
+			log.Printf("a client was tried to reconnect %d times\n", retries)
+			return
+		}
 		log.Printf("ERROR: %v", err)
 	}
 

@@ -49,11 +49,14 @@ async function runExample() {
           addMessage(msg.Body);
         }
       }
-    } /*, {
-      headers: {
-          'X-Username': 'kataras',
-      }
-  } // sets custom headers. */);
+    }, {
+        // if > 0 then on network failures it tries to reconnect every 5 seconds, defaults to 0 (disabled).
+        reconnect: 5000,
+        // custom headers:
+        headers: {
+          // 'X-Username': 'kataras',
+        }
+      });
 
     // You can either wait to conenct or just conn.connect("connect")
     // and put the `handleNamespaceConnectedConn` inside `_OnNamespaceConnected` callback instead.
@@ -62,6 +65,7 @@ async function runExample() {
     conn.connect("default");
 
   } catch (err) {
+    console.log("try-catch on await neffos.dial.");
     handleError(err);
   }
 }

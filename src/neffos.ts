@@ -655,6 +655,9 @@ interface Options {
     headers?: Headers;
     //
     protocols?: string[];
+    // if > 0 then it enables reconnection feature on browser-side
+    // and it tries every "x" milliseconds of this `reconnect` field. 
+    reconnect?: number;
 }
 
 function parseHeadersAsURLParameters(headers: Headers, url: string): string {
@@ -675,6 +678,24 @@ function parseHeadersAsURLParameters(headers: Headers, url: string): string {
     }
 
     return url;
+}
+
+function makeWebsocketConnection(endpoint: string, options?: Options | any) {
+    if (isBrowser) {
+        if (!isNull(options)) {
+            if (options.headers) {
+                endpoint = parseHeadersAsURLParameters(options.headers, endpoint);
+            }
+
+            if (options.protocols) {
+                return new WebSocket(endpoint, options.protocols);
+            } else {
+                return new WebSocket(endpoint)
+            }
+        }
+    }
+
+    return new WebSocket(endpoint, options)
 }
 
 /* The dial function returns a neffos client, a new `Conn` instance.
@@ -726,21 +747,7 @@ function dial(endpoint: string, connHandler: any, options?: Options | any): Prom
             return;
         }
 
-        let ws: WebSocket;
-
-        if (isBrowser) {
-            if (!isNull(options) && options.headers) {
-                endpoint = parseHeadersAsURLParameters(options.headers, endpoint);
-                if (options.protocols) {
-                    options = options.protocols;
-                }else{
-                    options = undefined;
-                }
-            }
-        }
-
-        ws = new WebSocket(endpoint, options);
-
+        const ws = makeWebsocketConnection(endpoint, options)
         let conn = new Conn(ws, namespaces);
         ws.binaryType = "arraybuffer";
         ws.onmessage = ((evt: MessageEvent) => {
@@ -761,10 +768,113 @@ function dial(endpoint: string, connHandler: any, options?: Options | any): Prom
             ws.send(ackBinary);
         });
         ws.onerror = ((err: Event) => {
+            // if (err.type !== undefined && err.type == "error" && (ws.readyState == ws.CLOSED || ws.readyState == ws.CLOSING)) {
+            //     // for any case, it should never happen.
+            //     return;
+            // }
             conn.close();
             reject(err);
         });
+        ws.onclose = ((evt: Event): any => {
+            if (conn.isClosed()) {
+                // reconnection is NOT allowed when:
+                // 1. server force-disconnect this client.
+                // 2. client disconnects itself manually.
+                // We check those two ^ with conn.isClosed().
+                // console.log("manual disconnect.")
+            } else {
+                // disable all previous event callbacks.
+                ws.onmessage = undefined;
+                ws.onopen = undefined;
+                ws.onerror = undefined;
+                ws.onclose = undefined;
+
+                // the reconnection feature is only for browser side clients only,
+                // nodejs and go side developers can implement their own strategies for now.
+                const reconnectEvery: number = (!isNull(options) && options.reconnect) ? options.reconnect : 0;
+
+                if (!isBrowser || reconnectEvery <= 0) {
+                    conn.close();
+                    return null;
+                }
+
+                // get the connected namespaces before .close clears.
+                let previouslyConnectedNamespacesNamesOnly = new Array<string>();
+                conn.connectedNamespaces.forEach((nsConn: NSConn, name: string) => {
+                    previouslyConnectedNamespacesNamesOnly.push(name);
+                })
+
+                conn.close();
+
+                whenResourceOnline(endpoint, reconnectEvery, () => {
+                    dial(endpoint, connHandler, options).then((newConn: Conn) => {
+                        if (isNull(resolve) || resolve.toString() == "function () { [native code] }") {
+                            // Idea behind the below:
+                            // If the original promise was in try-catch statement instead of .then and .catch callbacks
+                            // then this block will be called however, we don't have a way
+                            // to guess the user's actions in a try block, so we at least,
+                            //  we will try to reconnect to the previous namespaces automatically here.
+
+                            previouslyConnectedNamespacesNamesOnly.forEach((name: string) => {
+                                newConn.connect(name)
+                            })
+
+                            return;
+                        }
+
+                        resolve(newConn);
+                    }).catch(reject);
+                });
+            }
+
+
+            return null;
+        });
     });
+}
+
+
+function whenResourceOnline(endpoint: string, checkEvery: number, notifyOnline: () => void) {
+    // Don't fire webscoket requests just yet.
+    // We check if the HTTP endpoint is alive with a simple fetch, if it is alive then we notify the caller
+    // to proceed with a websocket request. That way we can notify the server-side how many times
+    // this client was trying to reconnect as well.
+    // Note:
+    // Chrome itself is emitting net::ERR_CONNECTION_REFUSED and the final Bad Request messages to the console on network failures on fetch,
+    // there is no way to block them programmatically, we could do a console.clear but this will clear any custom logging the end-dev may has too.
+
+    let endpointHTTP = endpoint.replace("ws://", "http://");
+    if (endpoint.startsWith("wss://")) {
+        endpointHTTP = endpoint.replace("ws://", "https://");
+    }
+
+    // counts and sends as header the previous failures (if any) and the succeed last one.
+    let tries = 1;
+
+    let getFetchOptions = (): any => {
+        return {
+            method: 'GET',
+            headers: {
+                // this header key should match the server.ServeHTTP's.
+                'X-Websocket-Reconnect': tries.toString()
+            }
+        };
+    };
+
+    let reconnect = (): void => {
+        // Note:
+        // We do not fire a try immediately after the disconnection as most developers will expect.
+        fetch(endpointHTTP, getFetchOptions()).then(() => {
+            notifyOnline();
+        }).catch(() => { // on network failures.
+            tries++;
+            setTimeout(() => {
+                reconnect();
+            }, checkEvery)
+        });
+    };
+
+    setTimeout(reconnect, checkEvery)
 }
 
 const ErrInvalidPayload = new Error("invalid payload");
@@ -790,7 +900,8 @@ class Conn {
     private queue: WSData[];
     private waitingMessages: Map<string, waitingMessageFunc>;
     private namespaces: Namespaces;
-    private connectedNamespaces: Map<string, NSConn>;
+    connectedNamespaces: Map<string, NSConn>; // export it.
+
     // private isConnectingProcesseses: string[]; // if elem exists then any receive of that namespace is locked until `askConnect` finished.
 
     constructor(conn: WebSocket, namespaces: Namespaces) {
@@ -805,10 +916,10 @@ class Conn {
         // this.isConnectingProcesseses = new Array<string>();
         this.closed = false;
 
-        this.conn.onclose = ((evt: Event): any => {
-            this.close();
-            return null;
-        });
+        // this.conn.onclose = ((evt: Event): any => {
+        //     this.close();
+        //     return null;
+        // });
     }
 
     isAcknowledged(): boolean {
@@ -1096,7 +1207,7 @@ class Conn {
 
     /* The isClosed method reports whether this connection is closed. */
     isClosed(): boolean {
-        return this.closed || this.conn.readyState == this.conn.CLOSED || false;
+        return this.closed // || this.conn.readyState == this.conn.CLOSED || false;
     }
 
     /* The write method writes a message to the server and reports whether the connection is still available. */
@@ -1172,11 +1283,11 @@ class Conn {
 
         this.waitingMessages.clear();
 
+        this.closed = true;
+
         if (this.conn.readyState === this.conn.OPEN) {
             this.conn.close();
         }
-
-        this.closed = true;
     }
 }
 

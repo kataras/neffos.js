@@ -598,6 +598,22 @@ function parseHeadersAsURLParameters(headers, url) {
     }
     return url;
 }
+function makeWebsocketConnection(endpoint, options) {
+    if (isBrowser) {
+        if (!isNull(options)) {
+            if (options.headers) {
+                endpoint = parseHeadersAsURLParameters(options.headers, endpoint);
+            }
+            if (options.protocols) {
+                return new WebSocket(endpoint, options.protocols);
+            }
+            else {
+                return new WebSocket(endpoint);
+            }
+        }
+    }
+    return new WebSocket(endpoint, options);
+}
 /* The dial function returns a neffos client, a new `Conn` instance.
    First parameter is the endpoint, i.e ws://localhost:8080/echo,
    the second parameter can be any object of the form of:
@@ -643,20 +659,7 @@ function dial(endpoint, connHandler, options) {
         if (isNull(namespaces)) {
             return;
         }
-        var ws;
-        if (isBrowser) {
-            if (!isNull(options) && options.headers) {
-                console.log(options);
-                endpoint = parseHeadersAsURLParameters(options.headers, endpoint);
-                if (options.protocols) {
-                    options = options.protocols;
-                }
-                else {
-                    options = undefined;
-                }
-            }
-        }
-        ws = new WebSocket(endpoint, options);
+        var ws = makeWebsocketConnection(endpoint, options);
         var conn = new Conn(ws, namespaces);
         ws.binaryType = "arraybuffer";
         ws.onmessage = (function (evt) {
@@ -676,10 +679,97 @@ function dial(endpoint, connHandler, options) {
             ws.send(ackBinary);
         });
         ws.onerror = (function (err) {
+            // if (err.type !== undefined && err.type == "error" && (ws.readyState == ws.CLOSED || ws.readyState == ws.CLOSING)) {
+            //     // for any case, it should never happen.
+            //     return;
+            // }
             conn.close();
             reject(err);
         });
+        ws.onclose = (function (evt) {
+            if (conn.isClosed()) {
+                // reconnection is NOT allowed when:
+                // 1. server force-disconnect this client.
+                // 2. client disconnects itself manually.
+                // We check those two ^ with conn.isClosed().
+                // console.log("manual disconnect.")
+            }
+            else {
+                // disable all previous event callbacks.
+                ws.onmessage = undefined;
+                ws.onopen = undefined;
+                ws.onerror = undefined;
+                ws.onclose = undefined;
+                // the reconnection feature is only for browser side clients only,
+                // nodejs and go side developers can implement their own strategies for now.
+                var reconnectEvery = (!isNull(options) && options.reconnect) ? options.reconnect : 0;
+                if (!isBrowser || reconnectEvery <= 0) {
+                    conn.close();
+                    return null;
+                }
+                // get the connected namespaces before .close clears.
+                var previouslyConnectedNamespacesNamesOnly_1 = new Array();
+                conn.connectedNamespaces.forEach(function (nsConn, name) {
+                    previouslyConnectedNamespacesNamesOnly_1.push(name);
+                });
+                conn.close();
+                whenResourceOnline(endpoint, reconnectEvery, function () {
+                    dial(endpoint, connHandler, options).then(function (newConn) {
+                        if (isNull(resolve) || resolve.toString() == "function () { [native code] }") {
+                            // Idea behind the below:
+                            // If the original promise was in try-catch statement instead of .then and .catch callbacks
+                            // then this block will be called however, we don't have a way
+                            // to guess the user's actions in a try block, so we at least,
+                            //  we will try to reconnect to the previous namespaces automatically here.
+                            previouslyConnectedNamespacesNamesOnly_1.forEach(function (name) {
+                                newConn.connect(name);
+                            });
+                            return;
+                        }
+                        resolve(newConn);
+                    }).catch(reject);
+                });
+            }
+            return null;
+        });
     });
+}
+function whenResourceOnline(endpoint, checkEvery, notifyOnline) {
+    // Don't fire webscoket requests just yet.
+    // We check if the HTTP endpoint is alive with a simple fetch, if it is alive then we notify the caller
+    // to proceed with a websocket request. That way we can notify the server-side how many times
+    // this client was trying to reconnect as well.
+    // Note:
+    // Chrome itself is emitting net::ERR_CONNECTION_REFUSED and the final Bad Request messages to the console on network failures on fetch,
+    // there is no way to block them programmatically, we could do a console.clear but this will clear any custom logging the end-dev may has too.
+    var endpointHTTP = endpoint.replace("ws://", "http://");
+    if (endpoint.startsWith("wss://")) {
+        endpointHTTP = endpoint.replace("ws://", "https://");
+    }
+    // counts and sends as header the previous failures (if any) and the succeed last one.
+    var tries = 1;
+    var getFetchOptions = function () {
+        return {
+            method: 'GET',
+            headers: {
+                // this header key should match the server.ServeHTTP's.
+                'X-Websocket-Reconnect': tries.toString()
+            }
+        };
+    };
+    var reconnect = function () {
+        // Note:
+        // We do not fire a try immediately after the disconnection as most developers will expect.
+        fetch(endpointHTTP, getFetchOptions()).then(function () {
+            notifyOnline();
+        }).catch(function () {
+            tries++;
+            setTimeout(function () {
+                reconnect();
+            }, checkEvery);
+        });
+    };
+    setTimeout(reconnect, checkEvery);
 }
 var ErrInvalidPayload = new Error("invalid payload");
 var ErrBadNamespace = new Error("bad namespace");
@@ -692,7 +782,6 @@ var ErrWrite = new Error("write closed");
 var Conn = /** @class */ (function () {
     // private isConnectingProcesseses: string[]; // if elem exists then any receive of that namespace is locked until `askConnect` finished.
     function Conn(conn, namespaces) {
-        var _this = this;
         this.conn = conn;
         this._isAcknowledged = false;
         this.namespaces = namespaces;
@@ -703,10 +792,10 @@ var Conn = /** @class */ (function () {
         this.connectedNamespaces = new Map();
         // this.isConnectingProcesseses = new Array<string>();
         this.closed = false;
-        this.conn.onclose = (function (evt) {
-            _this.close();
-            return null;
-        });
+        // this.conn.onclose = ((evt: Event): any => {
+        //     this.close();
+        //     return null;
+        // });
     }
     Conn.prototype.isAcknowledged = function () {
         return this._isAcknowledged;
@@ -981,7 +1070,7 @@ var Conn = /** @class */ (function () {
     };
     /* The isClosed method reports whether this connection is closed. */
     Conn.prototype.isClosed = function () {
-        return this.closed || this.conn.readyState == this.conn.CLOSED || false;
+        return this.closed; // || this.conn.readyState == this.conn.CLOSED || false;
     };
     /* The write method writes a message to the server and reports whether the connection is still available. */
     Conn.prototype.write = function (msg) {
@@ -1042,10 +1131,10 @@ var Conn = /** @class */ (function () {
             _this.connectedNamespaces.delete(ns.namespace);
         });
         this.waitingMessages.clear();
+        this.closed = true;
         if (this.conn.readyState === this.conn.OPEN) {
             this.conn.close();
         }
-        this.closed = true;
     };
     return Conn;
 }());
