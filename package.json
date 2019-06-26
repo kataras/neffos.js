@@ -1,6 +1,6 @@
 {
     "name": "neffos.js",
-    "version": "0.1.13",
+    "version": "0.1.14",
     "description": "javascript client for the modern neffos websocket framework",
     "keywords": [
         "neffos",
@@ -22,7 +22,8 @@
     "main": "./dist/neffos.js",
     "files": [
         "LICENSE",
-        "dist/"
+        "dist/",
+        "types/"
     ],
     "license": "MIT",
     "repository": {

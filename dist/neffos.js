@@ -708,9 +708,15 @@ function dial(endpoint, connHandler, options) {
                     return null;
                 }
                 // get the connected namespaces before .close clears.
-                var previouslyConnectedNamespacesNamesOnly_1 = new Array();
+                var previouslyConnectedNamespacesNamesOnly_1 = new Map(); // connected namespaces[key] -> [values]joined rooms;
                 conn.connectedNamespaces.forEach(function (nsConn, name) {
-                    previouslyConnectedNamespacesNamesOnly_1.push(name);
+                    var previouslyJoinedRooms = new Array();
+                    if (!isNull(nsConn.rooms) && nsConn.rooms.size > 0) {
+                        nsConn.rooms.forEach(function (roomConn, roomName) {
+                            previouslyJoinedRooms.push(roomName);
+                        });
+                    }
+                    previouslyConnectedNamespacesNamesOnly_1.set(name, previouslyJoinedRooms);
                 });
                 conn.close();
                 whenResourceOnline(endpoint, reconnectEvery, function () {
@@ -721,8 +727,15 @@ function dial(endpoint, connHandler, options) {
                             // then this block will be called however, we don't have a way
                             // to guess the user's actions in a try block, so we at least,
                             //  we will try to reconnect to the previous namespaces automatically here.
-                            previouslyConnectedNamespacesNamesOnly_1.forEach(function (name) {
-                                newConn.connect(name);
+                            previouslyConnectedNamespacesNamesOnly_1.forEach(function (joinedRooms, name) {
+                                var whenConnected = function (joinedRooms) {
+                                    return function (newNSConn) {
+                                        joinedRooms.forEach(function (roomName) {
+                                            newNSConn.joinRoom(roomName);
+                                        });
+                                    };
+                                };
+                                newConn.connect(name).then(whenConnected(joinedRooms));
                             });
                             return;
                         }

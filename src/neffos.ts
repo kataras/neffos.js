@@ -799,9 +799,15 @@ function dial(endpoint: string, connHandler: any, options?: Options | any): Prom
                 }
 
                 // get the connected namespaces before .close clears.
-                let previouslyConnectedNamespacesNamesOnly = new Array<string>();
+                let previouslyConnectedNamespacesNamesOnly = new Map<string, Array<string>>() // connected namespaces[key] -> [values]joined rooms;
                 conn.connectedNamespaces.forEach((nsConn: NSConn, name: string) => {
-                    previouslyConnectedNamespacesNamesOnly.push(name);
+                    let previouslyJoinedRooms = new Array<string>();
+                    if (!isNull(nsConn.rooms) && nsConn.rooms.size > 0) {
+                        nsConn.rooms.forEach((roomConn, roomName) => {
+                            previouslyJoinedRooms.push(roomName);
+                        });
+                    }
+                    previouslyConnectedNamespacesNamesOnly.set(name, previouslyJoinedRooms);
                 })
 
                 conn.close();
@@ -815,8 +821,17 @@ function dial(endpoint: string, connHandler: any, options?: Options | any): Prom
                             // to guess the user's actions in a try block, so we at least,
                             //  we will try to reconnect to the previous namespaces automatically here.
 
-                            previouslyConnectedNamespacesNamesOnly.forEach((name: string) => {
-                                newConn.connect(name)
+                            previouslyConnectedNamespacesNamesOnly.forEach((joinedRooms, name) => {
+
+                                let whenConnected = (joinedRooms: string[]): ((newNSConn: NSConn) => void) => {
+                                    return (newNSConn: NSConn) => {
+                                        joinedRooms.forEach((roomName: string) => {
+                                            newNSConn.joinRoom(roomName);
+                                        });
+                                    };
+                                };
+
+                                newConn.connect(name).then(whenConnected(joinedRooms));
                             })
 
                             return;

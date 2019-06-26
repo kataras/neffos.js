@@ -10,7 +10,7 @@
      However, `neffos.(min.)js` is a NPM package too so alternatively,
      you can use it as dependency on your package.json and all nodejs-npm tooling become available:
      see the "browserify" example for more-->
-<script src="https://cdn.jsdelivr.net/npm/neffos.js@0.1.13/dist/neffos.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/neffos.js@latest/dist/neffos.min.js"></script>
 <script>
     // `neffos` global variable is available now.
     var scheme = document.location.protocol == "https:" ? "wss" : "ws";
@@ -57,11 +57,14 @@
                         addMessage(msg.Body);
                     }
                 }
-            } /*, {
+            }, {
+                    // if > 0 then on network failures it tries to reconnect every 5 seconds, defaults to 0 (disabled).
+                    reconnect: 5000,
+                    // custom headers:
                     headers: {
-                        'X-Username': 'kataras',
+                        // 'X-Username': 'kataras',
                     }
-                } // sets custom headers. */);
+                });
 
             // You can either wait to conenct or just conn.connect("connect")
             // and put the `handleNamespaceConnectedConn` inside `_OnNamespaceConnected` callback instead.
