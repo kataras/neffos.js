@@ -89,6 +89,10 @@ func server(upgrader neffos.Upgrader) {
 	// }
 
 	srv.OnConnect = func(c *neffos.Conn) error {
+		if c.WasReconnected() {
+			log.Printf("[%s] connection is a result of a client-side re-connection, with tries: %d", c.ID(), c.ReconnectTries)
+		}
+
 		if dissalowAll {
 			return fmt.Errorf("you are not allowed to connect here for some reason")
 		}
@@ -120,10 +124,6 @@ func server(upgrader neffos.Upgrader) {
 	}
 
 	srv.OnUpgradeError = func(err error) {
-		if retries, ok := neffos.IsTryingToReconnect(err); ok {
-			log.Printf("a client was tried to reconnect %d times\n", retries)
-			return
-		}
 		log.Printf("ERROR: %v", err)
 	}
 

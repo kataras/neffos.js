@@ -34,6 +34,10 @@ async function runExample() {
     const conn = await neffos.dial(wsURL, {
       default: { // "default" namespace.
         _OnNamespaceConnected: function (nsConn, msg) {
+          if (nsConn.conn.wasReconnected()) {
+            addMessage("re-connected after " + nsConn.conn.reconnectTries.toString() + " trie(s)");
+          }
+
           addMessage("connected to namespace: " + msg.Namespace);
           handleNamespaceConnectedConn(nsConn);
         },
@@ -53,9 +57,9 @@ async function runExample() {
         // if > 0 then on network failures it tries to reconnect every 5 seconds, defaults to 0 (disabled).
         reconnect: 5000,
         // custom headers:
-        headers: {
-          // 'X-Username': 'kataras',
-        }
+        // headers: {
+        //   'X-Username': 'kataras'
+        // }
       });
 
     // You can either wait to conenct or just conn.connect("connect")

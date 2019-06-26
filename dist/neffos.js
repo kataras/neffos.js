@@ -598,22 +598,6 @@ function parseHeadersAsURLParameters(headers, url) {
     }
     return url;
 }
-function makeWebsocketConnection(endpoint, options) {
-    if (isBrowser) {
-        if (!isNull(options)) {
-            if (options.headers) {
-                endpoint = parseHeadersAsURLParameters(options.headers, endpoint);
-            }
-            if (options.protocols) {
-                return new WebSocket(endpoint, options.protocols);
-            }
-            else {
-                return new WebSocket(endpoint);
-            }
-        }
-    }
-    return new WebSocket(endpoint, options);
-}
 /* The dial function returns a neffos client, a new `Conn` instance.
    First parameter is the endpoint, i.e ws://localhost:8080/echo,
    the second parameter can be any object of the form of:
@@ -648,6 +632,11 @@ function makeWebsocketConnection(endpoint, options) {
     See https://github.com/kataras/neffos.js/tree/master/_examples for more.
 */
 function dial(endpoint, connHandler, options) {
+    return _dial(endpoint, connHandler, 0, options);
+}
+// this header key should match the server.ServeHTTP's.
+var websocketReconnectHeaderKey = 'X-Websocket-Reconnect';
+function _dial(endpoint, connHandler, tries, options) {
     if (endpoint.indexOf("ws") == -1) {
         endpoint = "ws://" + endpoint;
     }
@@ -659,8 +648,27 @@ function dial(endpoint, connHandler, options) {
         if (isNull(namespaces)) {
             return;
         }
+        if (isNull(options)) {
+            options = {};
+        }
+        else if (isNull(options.headers)) {
+            options.headers = {};
+        }
+        // the reconnection feature is only for browser side clients only,
+        // nodejs and go side developers can implement their own strategies for now.
+        var reconnectEvery = (options.reconnect) ? options.reconnect : 0;
+        if (tries > 0 && reconnectEvery > 0) {
+            //     options.headers = {
+            //         [websocketReconnectHeaderKey]: tries.toString()
+            //     };
+            options.headers[websocketReconnectHeaderKey] = tries.toString();
+        }
+        else if (!isNull(options.headers[websocketReconnectHeaderKey])) /* against tricks */ {
+            delete options.headers[websocketReconnectHeaderKey];
+        }
         var ws = makeWebsocketConnection(endpoint, options);
         var conn = new Conn(ws, namespaces);
+        conn.reconnectTries = tries;
         ws.binaryType = "arraybuffer";
         ws.onmessage = (function (evt) {
             var err = conn.handle(evt);
@@ -700,9 +708,6 @@ function dial(endpoint, connHandler, options) {
                 ws.onopen = undefined;
                 ws.onerror = undefined;
                 ws.onclose = undefined;
-                // the reconnection feature is only for browser side clients only,
-                // nodejs and go side developers can implement their own strategies for now.
-                var reconnectEvery = (!isNull(options) && options.reconnect) ? options.reconnect : 0;
                 if (!isBrowser || reconnectEvery <= 0) {
                     conn.close();
                     return null;
@@ -719,8 +724,8 @@ function dial(endpoint, connHandler, options) {
                     previouslyConnectedNamespacesNamesOnly_1.set(name, previouslyJoinedRooms);
                 });
                 conn.close();
-                whenResourceOnline(endpoint, reconnectEvery, function () {
-                    dial(endpoint, connHandler, options).then(function (newConn) {
+                whenResourceOnline(endpoint, reconnectEvery, function (tries) {
+                    _dial(endpoint, connHandler, tries, options).then(function (newConn) {
                         if (isNull(resolve) || resolve.toString() == "function () { [native code] }") {
                             // Idea behind the below:
                             // If the original promise was in try-catch statement instead of .then and .catch callbacks
@@ -747,6 +752,22 @@ function dial(endpoint, connHandler, options) {
         });
     });
 }
+function makeWebsocketConnection(endpoint, options) {
+    if (isBrowser) {
+        if (!isNull(options)) {
+            if (options.headers) {
+                endpoint = parseHeadersAsURLParameters(options.headers, endpoint);
+            }
+            if (options.protocols) {
+                return new WebSocket(endpoint, options.protocols);
+            }
+            else {
+                return new WebSocket(endpoint);
+            }
+        }
+    }
+    return new WebSocket(endpoint, options);
+}
 function whenResourceOnline(endpoint, checkEvery, notifyOnline) {
     // Don't fire webscoket requests just yet.
     // We check if the HTTP endpoint is alive with a simple fetch, if it is alive then we notify the caller
@@ -761,21 +782,16 @@ function whenResourceOnline(endpoint, checkEvery, notifyOnline) {
     }
     // counts and sends as header the previous failures (if any) and the succeed last one.
     var tries = 1;
-    var getFetchOptions = function () {
-        return {
-            method: 'GET',
-            headers: {
-                // this header key should match the server.ServeHTTP's.
-                'X-Websocket-Reconnect': tries.toString()
-            }
-        };
-    };
+    var fetchOptions = { method: 'HEAD' };
     var reconnect = function () {
         // Note:
         // We do not fire a try immediately after the disconnection as most developers will expect.
-        fetch(endpointHTTP, getFetchOptions()).then(function () {
-            notifyOnline();
+        fetch(endpointHTTP, fetchOptions).then(function () {
+            notifyOnline(tries);
         }).catch(function () {
+            // if (err !== undefined && err.toString() !== "TypeError: Failed to fetch") {
+            //     console.log(err);
+            // }
             tries++;
             setTimeout(function () {
                 reconnect();
@@ -796,6 +812,7 @@ var Conn = /** @class */ (function () {
     // private isConnectingProcesseses: string[]; // if elem exists then any receive of that namespace is locked until `askConnect` finished.
     function Conn(conn, namespaces) {
         this.conn = conn;
+        this.reconnectTries = 0;
         this._isAcknowledged = false;
         this.namespaces = namespaces;
         var hasEmptyNS = namespaces.has("");
@@ -810,6 +827,11 @@ var Conn = /** @class */ (function () {
         //     return null;
         // });
     }
+    /* The wasReconnected method reports whether the current connection is the result of a reconnection.
+       To get the numbers of total retries see the `reconnectTries` field. */
+    Conn.prototype.wasReconnected = function () {
+        return this.reconnectTries > 0;
+    };
     Conn.prototype.isAcknowledged = function () {
         return this._isAcknowledged;
     };

@@ -169,7 +169,13 @@ export class Conn {
   /* ID is the generated connection ID from the server-side, all connected namespaces(`NSConn` instances)
     that belong to that connection have the same ID. It is available immediately after the `dial`. */
   ID: string;
+  /* If > 0 then this connection is the result of a reconnection,
+   see `wasReconnected()` too. */
+  reconnectTries: number;
   constructor(conn: any, namespaces: Namespaces, protocols?: string[]);
+  /* The wasReconnected method reports whether the current connection is the result of a reconnection.
+   To get the numbers of total retries see the `reconnectTries` field. */
+  wasReconnected(): boolean;
   /* The connect method returns a new connected to the specific "namespace" `NSConn` instance or an error. */
   connect(namespace: string): Promise<NSConn>;
   /* waitServerConnect method blocks until server manually calls the connection's `Connect`
