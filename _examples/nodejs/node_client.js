@@ -10,6 +10,9 @@ async function runExample() {
     const conn = await neffos.dial(wsURL, {
       default: { // "default" namespace.
         _OnNamespaceConnected: function (nsConn, msg) {
+          if (nsConn.conn.wasReconnected()) {
+            console.log("re-connected after " + nsConn.conn.reconnectTries.toString() + " trie(s)");
+          }
           console.log("connected to namespace: " + msg.Namespace);
         },
         _OnNamespaceDisconnect: function (nsConn, msg) {
@@ -19,11 +22,13 @@ async function runExample() {
           console.log(msg.Body);
         }
       }
-    }/*, {
+    }, { // optional.
+        reconnect: 2000,
+        // set custom headers.
         headers: {
-          'X-Username': 'kataras',
+          // 'X-Username': 'kataras',
         }
-      } // sets custom headers. */);
+      });
 
     const nsConn = await conn.connect("default");
     nsConn.emit("chat", "Hello from client side!");

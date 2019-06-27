@@ -3,27 +3,13 @@
 // so all works and minimum changes were required to achieve that result.
 // See the `genWait()` too.
 const isBrowser = (typeof window !== 'undefined');
+var _fetch = (typeof fetch !== 'undefined') ? fetch : undefined;
 if (!isBrowser) {
     WebSocket = require('ws');
+    _fetch = require('node-fetch') as (input: RequestInfo, init?: RequestInit) => Promise<Response>;
 } else {
     WebSocket = window["WebSocket"];
 }
-
-// class Neffos {
-
-//     // Message = class {...} can work as well
-//     // but we have an issue on NSConn and Room, can't find the declaration,
-//     // so instead those will be exported by the exports/module.exports for nodejs
-//     // and root.neffos.==== for browser now that we can't use `export` keyword directly.
-//     constructor() { }
-
-//     // dial(...) => {...}
-// }
-
-// interface neffosGlobal extends NodeJS.Global {
-//     neffos: Neffos;
-// }
-//
 
 /* The WSData is just a string type alias. */
 type WSData = string;
@@ -655,7 +641,7 @@ interface Options {
     headers?: Headers;
     //
     protocols?: string[];
-    // if > 0 then it enables reconnection feature on browser-side
+    // if > 0 then it enables reconnection feature
     // and it tries every "x" milliseconds of this `reconnect` field. 
     reconnect?: number;
 }
@@ -714,7 +700,6 @@ function parseHeadersAsURLParameters(headers: Headers, url: string): string {
     See https://github.com/kataras/neffos.js/tree/master/_examples for more.
 */
 function dial(endpoint: string, connHandler: any, options?: Options | any): Promise<Conn> {
-
     return _dial(endpoint, connHandler, 0, options);
 }
 
@@ -740,13 +725,12 @@ function _dial(endpoint: string, connHandler: any, tries: number, options?: Opti
 
         if (isNull(options)) {
             options = {};
-        } else if (isNull(options.headers)) {
+        }
+
+        if (isNull(options.headers)) {
             options.headers = {};
         }
 
-
-        // the reconnection feature is only for browser side clients only,
-        // nodejs and go side developers can implement their own strategies for now.
         const reconnectEvery: number = (options.reconnect) ? options.reconnect : 0;
 
         if (tries > 0 && reconnectEvery > 0) {
@@ -802,7 +786,7 @@ function _dial(endpoint: string, connHandler: any, tries: number, options?: Opti
                 ws.onerror = undefined;
                 ws.onclose = undefined;
 
-                if (!isBrowser || reconnectEvery <= 0) {
+                if (reconnectEvery <= 0) {
                     conn.close();
                     return null;
                 }
@@ -894,10 +878,10 @@ function whenResourceOnline(endpoint: string, checkEvery: number, notifyOnline: 
 
     const fetchOptions = { method: 'HEAD' };
 
-    let reconnect = (): void => {
+    let check = (): void => {
         // Note:
         // We do not fire a try immediately after the disconnection as most developers will expect.
-        fetch(endpointHTTP, fetchOptions).then(() => {
+        _fetch(endpointHTTP, fetchOptions).then(() => {
             notifyOnline(tries);
         }).catch(() => { // on network failures.
             // if (err !== undefined && err.toString() !== "TypeError: Failed to fetch") {
@@ -905,12 +889,12 @@ function whenResourceOnline(endpoint: string, checkEvery: number, notifyOnline: 
             // }
             tries++;
             setTimeout(() => {
-                reconnect();
+                check();
             }, checkEvery)
         });
     };
 
-    setTimeout(reconnect, checkEvery)
+    setTimeout(check, checkEvery)
 }
 
 const ErrInvalidPayload = new Error("invalid payload");

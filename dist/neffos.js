@@ -38,8 +38,10 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 // so all works and minimum changes were required to achieve that result.
 // See the `genWait()` too.
 var isBrowser = (typeof window !== 'undefined');
+var _fetch = (typeof fetch !== 'undefined') ? fetch : undefined;
 if (!isBrowser) {
     WebSocket = require('ws');
+    _fetch = require('node-fetch');
 }
 else {
     WebSocket = window["WebSocket"];
@@ -651,11 +653,9 @@ function _dial(endpoint, connHandler, tries, options) {
         if (isNull(options)) {
             options = {};
         }
-        else if (isNull(options.headers)) {
+        if (isNull(options.headers)) {
             options.headers = {};
         }
-        // the reconnection feature is only for browser side clients only,
-        // nodejs and go side developers can implement their own strategies for now.
         var reconnectEvery = (options.reconnect) ? options.reconnect : 0;
         if (tries > 0 && reconnectEvery > 0) {
             //     options.headers = {
@@ -708,7 +708,7 @@ function _dial(endpoint, connHandler, tries, options) {
                 ws.onopen = undefined;
                 ws.onerror = undefined;
                 ws.onclose = undefined;
-                if (!isBrowser || reconnectEvery <= 0) {
+                if (reconnectEvery <= 0) {
                     conn.close();
                     return null;
                 }
@@ -783,10 +783,10 @@ function whenResourceOnline(endpoint, checkEvery, notifyOnline) {
     // counts and sends as header the previous failures (if any) and the succeed last one.
     var tries = 1;
     var fetchOptions = { method: 'HEAD' };
-    var reconnect = function () {
+    var check = function () {
         // Note:
         // We do not fire a try immediately after the disconnection as most developers will expect.
-        fetch(endpointHTTP, fetchOptions).then(function () {
+        _fetch(endpointHTTP, fetchOptions).then(function () {
             notifyOnline(tries);
         }).catch(function () {
             // if (err !== undefined && err.toString() !== "TypeError: Failed to fetch") {
@@ -794,11 +794,11 @@ function whenResourceOnline(endpoint, checkEvery, notifyOnline) {
             // }
             tries++;
             setTimeout(function () {
-                reconnect();
+                check();
             }, checkEvery);
         });
     };
-    setTimeout(reconnect, checkEvery);
+    setTimeout(check, checkEvery);
 }
 var ErrInvalidPayload = new Error("invalid payload");
 var ErrBadNamespace = new Error("bad namespace");
