@@ -776,10 +776,7 @@ function whenResourceOnline(endpoint, checkEvery, notifyOnline) {
     // Note:
     // Chrome itself is emitting net::ERR_CONNECTION_REFUSED and the final Bad Request messages to the console on network failures on fetch,
     // there is no way to block them programmatically, we could do a console.clear but this will clear any custom logging the end-dev may has too.
-    var endpointHTTP = endpoint.replace("ws://", "http://");
-    if (endpoint.startsWith("wss://")) {
-        endpointHTTP = endpoint.replace("ws://", "https://");
-    }
+    var endpointHTTP = endpoint.replace(/(ws)(s)?\:\/\//, "http$2://");
     // counts and sends as header the previous failures (if any) and the succeed last one.
     var tries = 1;
     var fetchOptions = { method: 'HEAD' };
