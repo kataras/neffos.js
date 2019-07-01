@@ -3,7 +3,7 @@
 // so all works and minimum changes were required to achieve that result.
 // See the `genWait()` too.
 const isBrowser = (typeof window !== 'undefined');
-var _fetch = (typeof fetch !== 'undefined') ? fetch : undefined;
+var _fetch:any = (typeof fetch !== 'undefined') ? fetch : undefined;
 if (!isBrowser) {
     WebSocket = require('ws');
     _fetch = require('node-fetch');
