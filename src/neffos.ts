@@ -6,7 +6,7 @@ const isBrowser = (typeof window !== 'undefined');
 var _fetch = (typeof fetch !== 'undefined') ? fetch : undefined;
 if (!isBrowser) {
     WebSocket = require('ws');
-    _fetch = require('node-fetch') as (input: RequestInfo, init?: RequestInit) => Promise<Response>;
+    _fetch = require('node-fetch');
 } else {
     WebSocket = window["WebSocket"];
 }
@@ -873,7 +873,7 @@ function whenResourceOnline(endpoint: string, checkEvery: number, notifyOnline: 
     // counts and sends as header the previous failures (if any) and the succeed last one.
     let tries = 1;
 
-    const fetchOptions = { method: 'HEAD' };
+    const fetchOptions = { method: 'HEAD', mode: 'no-cors' };
 
     let check = (): void => {
         // Note:

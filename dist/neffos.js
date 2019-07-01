@@ -779,7 +779,7 @@ function whenResourceOnline(endpoint, checkEvery, notifyOnline) {
     var endpointHTTP = endpoint.replace(/(ws)(s)?\:\/\//, "http$2://");
     // counts and sends as header the previous failures (if any) and the succeed last one.
     var tries = 1;
-    var fetchOptions = { method: 'HEAD' };
+    var fetchOptions = { method: 'HEAD', mode: 'no-cors' };
     var check = function () {
         // Note:
         // We do not fire a try immediately after the disconnection as most developers will expect.
