@@ -3,7 +3,7 @@
 // so all works and minimum changes were required to achieve that result.
 // See the `genWait()` too.
 const isBrowser = (typeof window !== 'undefined');
-var _fetch:any = (typeof fetch !== 'undefined') ? fetch : undefined;
+var _fetch: any = (typeof fetch !== 'undefined') ? fetch : undefined;
 if (!isBrowser) {
     WebSocket = require('ws');
     _fetch = require('node-fetch');
@@ -91,7 +91,7 @@ class Message {
     Body: WSData;
     /* The Err contains any message's error if defined and not empty.
        server-side and client-side can return an error instead of a message from inside event callbacks. */
-    Err: string;
+    Err: Error;
 
     isError: boolean;
     isNoOp: boolean;
@@ -182,6 +182,37 @@ function unescapeMessageField(s: string): string {
     return s.replace(unescapeRegExp, messageSeparator);
 }
 
+class replyError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'replyError';
+        Error.captureStackTrace(this, replyError);
+
+        // Set the prototype explicitly,
+        // see `isReply`'s comments for more information.
+        Object.setPrototypeOf(this, replyError.prototype);
+    }
+}
+
+/* reply function is a helper for nsConn.Emit(incomignMsg.Event, newBody)
+   it can be used as a return value of any MessageHandlerFunc. */
+function reply(body: WSData): Error {
+    return new replyError(body);
+}
+
+function isReply(err: Error): boolean {
+
+    // unfortunately this doesn't work like normal ES6,
+    // typescript has an issue:
+    // https://github.com/Microsoft/TypeScript/issues/22585
+    // https://github.com/Microsoft/TypeScript/issues/13965
+    // hack but doesn't work on IE 10 and prior, we can adapt it
+    // because the library itself is designed for modern browsers instead.
+    //
+    // https://github.com/Microsoft/TypeScript/wiki/FAQ#why-doesnt-extending-built-ins-like-error-array-and-map-work
+    return (err instanceof replyError);
+}
+
 function serializeMessage(msg: Message): WSData {
     if (msg.IsNative && isEmpty(msg.wait)) {
         return msg.Body;
@@ -191,9 +222,11 @@ function serializeMessage(msg: Message): WSData {
     let isNoOpString = falseString;
     let body = msg.Body || "";
 
-    if (msg.isError) {
-        body = msg.Err;
-        isErrorString = trueString;
+    if (!isEmpty(msg.Err)) {
+        body = msg.Err.message;
+        if (!isReply(msg.Err)) {
+            isErrorString = trueString;
+        }
     }
 
     if (msg.isNoOp) {
@@ -259,7 +292,7 @@ function deserializeMessage(data: WSData, allowNativeMessages: boolean): Message
     let body = dts[6];
     if (!isEmpty(body)) {
         if (msg.isError) {
-            msg.Err = body;
+            msg.Err = new Error(body);
         } else {
             msg.Body = body;
         }
@@ -299,7 +332,6 @@ function genEmptyReplyToWait(wait: string): string {
 class Room {
     nsConn: NSConn;
     name: string;
-
 
     constructor(ns: NSConn, roomName: string) {
         this.nsConn = ns;
@@ -498,7 +530,7 @@ class NSConn {
         if (!this.rooms.has(msg.Room)) {
             let err = fireEvent(this, msg);
             if (!isEmpty(err)) {
-                msg.Err = err.message;
+                msg.Err = err;
                 this.conn.write(msg);
                 return;
             }
@@ -1044,10 +1076,10 @@ class Conn {
                     return ErrBadNamespace;
                 }
                 msg.IsLocal = false;
-                let err = fireEvent(ns, msg);
+                const err = fireEvent(ns, msg);
                 if (!isEmpty(err)) {
                     // write any error back to the server.
-                    msg.Err = err.message;
+                    msg.Err = err;
                     this.write(msg);
                     return err;
                 }
@@ -1094,7 +1126,7 @@ class Conn {
 
         let events = getEvents(this.namespaces, msg.Namespace)
         if (isNull(events)) {
-            msg.Err = ErrBadNamespace.message;
+            msg.Err = ErrBadNamespace;
             this.write(msg);
             return;
         }
@@ -1146,7 +1178,7 @@ class Conn {
 
             this.waitingMessages.set(msg.wait, ((receive: Message): void => {
                 if (receive.isError) {
-                    reject(new Error(receive.Err));
+                    reject(receive.Err);
                     return;
                 }
                 resolve(receive);
@@ -1355,6 +1387,7 @@ class Conn {
         ErrBadRoom: ErrBadRoom,
         ErrClosed: ErrClosed,
         ErrWrite: ErrWrite,
+        reply: reply,
         marshal: marshal
     }
 

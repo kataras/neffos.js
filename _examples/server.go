@@ -39,6 +39,10 @@ var handler = neffos.WithTimeout{
 				return nil
 			},
 			"chat": func(c *neffos.NSConn, msg neffos.Message) error {
+				if msg.Err != nil {
+					log.Printf("user error from chat: %v", msg.Err)
+					return nil
+				}
 				log.Printf("--server-side-- send back the message [%s:%s]", msg.Event, string(msg.Body))
 				//	c.Emit(msg.Event, msg.Body)
 				//	c.Server().Broadcast(nil, msg) // to all including this connection.

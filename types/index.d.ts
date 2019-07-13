@@ -32,7 +32,7 @@ export class Message {
   Body: WSData;
   /* The Err contains any message's error if defined and not empty.
      server-side and client-side can return an error instead of a message from inside event callbacks. */
-  Err: string;
+  Err: Error;
   /* The IsForced if true then it means that this is not an incoming action but a force action.
      For example when websocket connection lost from remote the OnNamespaceDisconnect `Message.IsForced` will be true */
   IsForced: boolean;
@@ -53,6 +53,9 @@ export class Message {
    It can be used on `emit` methods.
    See `Message.unmarshal` method too. */
 export function marshal(obj: any): string;
+/* reply function is a helper for nsConn.Emit(incomignMsg.Event, newBody)
+   it can be used as a return value of any MessageHandlerFunc. */
+export function reply(body: WSData): Error;
 
 /* The Room describes a connected connection to a room,
    emits messages with the `Message.Room` filled to the specific room

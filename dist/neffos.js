@@ -1,3 +1,16 @@
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
@@ -165,6 +178,35 @@ function unescapeMessageField(s) {
     }
     return s.replace(unescapeRegExp, messageSeparator);
 }
+var replyError = /** @class */ (function (_super) {
+    __extends(replyError, _super);
+    function replyError(message) {
+        var _this = _super.call(this, message) || this;
+        _this.name = 'replyError';
+        Error.captureStackTrace(_this, replyError);
+        // Set the prototype explicitly,
+        // see `isReply`'s comments for more information.
+        Object.setPrototypeOf(_this, replyError.prototype);
+        return _this;
+    }
+    return replyError;
+}(Error));
+/* reply function is a helper for nsConn.Emit(incomignMsg.Event, newBody)
+   it can be used as a return value of any MessageHandlerFunc. */
+function reply(body) {
+    return new replyError(body);
+}
+function isReply(err) {
+    // unfortunately this doesn't work like normal ES6,
+    // typescript has an issue:
+    // https://github.com/Microsoft/TypeScript/issues/22585
+    // https://github.com/Microsoft/TypeScript/issues/13965
+    // hack but doesn't work on IE 10 and prior, we can adapt it
+    // because the library itself is designed for modern browsers instead.
+    //
+    // https://github.com/Microsoft/TypeScript/wiki/FAQ#why-doesnt-extending-built-ins-like-error-array-and-map-work
+    return (err instanceof replyError);
+}
 function serializeMessage(msg) {
     if (msg.IsNative && isEmpty(msg.wait)) {
         return msg.Body;
@@ -172,9 +214,11 @@ function serializeMessage(msg) {
     var isErrorString = falseString;
     var isNoOpString = falseString;
     var body = msg.Body || "";
-    if (msg.isError) {
-        body = msg.Err;
-        isErrorString = trueString;
+    if (!isEmpty(msg.Err)) {
+        body = msg.Err.message;
+        if (!isReply(msg.Err)) {
+            isErrorString = trueString;
+        }
     }
     if (msg.isNoOp) {
         isNoOpString = trueString;
@@ -236,7 +280,7 @@ function deserializeMessage(data, allowNativeMessages) {
     var body = dts[6];
     if (!isEmpty(body)) {
         if (msg.isError) {
-            msg.Err = body;
+            msg.Err = new Error(body);
         }
         else {
             msg.Body = body;
@@ -487,7 +531,7 @@ var NSConn = /** @class */ (function () {
         if (!this.rooms.has(msg.Room)) {
             var err = fireEvent(this, msg);
             if (!isEmpty(err)) {
-                msg.Err = err.message;
+                msg.Err = err;
                 this.conn.write(msg);
                 return;
             }
@@ -918,7 +962,7 @@ var Conn = /** @class */ (function () {
                 var err = fireEvent(ns, msg);
                 if (!isEmpty(err)) {
                     // write any error back to the server.
-                    msg.Err = err.message;
+                    msg.Err = err;
                     this.write(msg);
                     return err;
                 }
@@ -962,7 +1006,7 @@ var Conn = /** @class */ (function () {
         }
         var events = getEvents(this.namespaces, msg.Namespace);
         if (isNull(events)) {
-            msg.Err = ErrBadNamespace.message;
+            msg.Err = ErrBadNamespace;
             this.write(msg);
             return;
         }
@@ -1002,7 +1046,7 @@ var Conn = /** @class */ (function () {
             msg.wait = genWait();
             _this.waitingMessages.set(msg.wait, (function (receive) {
                 if (receive.isError) {
-                    reject(new Error(receive.Err));
+                    reject(receive.Err);
                     return;
                 }
                 resolve(receive);
@@ -1202,6 +1246,7 @@ var Conn = /** @class */ (function () {
         ErrBadRoom: ErrBadRoom,
         ErrClosed: ErrClosed,
         ErrWrite: ErrWrite,
+        reply: reply,
         marshal: marshal
     };
     if (typeof exports !== 'undefined') {

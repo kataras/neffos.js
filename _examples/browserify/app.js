@@ -50,6 +50,9 @@ async function runExample() {
           }
         },
         chat: function (nsConn, msg) { // "chat" event.
+          if (msg.Body == "test_reply") {
+            return neffos.reply("same namespace-event but new body");
+          }
           addMessage(msg.Body);
         }
       }
