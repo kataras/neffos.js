@@ -165,6 +165,9 @@ export const ErrBadRoom: Error;
 export const ErrClosed: Error;
 export const ErrWrite: Error;
 
+/* The isCloseError function reports whether incoming error is received because of server shutdown. */
+export function isCloseError(err: Error): boolean;
+
 /* The Conn class contains the websocket connection and the neffos communication functionality.
    Its `connect` will return a new `NSConn` instance, each connection can connect to one or more namespaces.
    Each `NSConn` can join to multiple rooms. */

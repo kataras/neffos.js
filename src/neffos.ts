@@ -932,6 +932,15 @@ const ErrBadRoom = new Error("bad room");
 const ErrClosed = new Error("use of closed connection");
 const ErrWrite = new Error("write closed");
 
+/* The isCloseError function reports whether incoming error is received because of server shutdown. */
+function isCloseError(err: Error): boolean {
+    if (err && !isEmpty(err.message)) {
+        return err.message.indexOf("[-1] write closed") >= 0;
+    }
+
+    return false;
+}
+
 /* The Conn class contains the websocket connection and the neffos communication functionality.
    Its `connect` will return a new `NSConn` instance, each connection can connect to one or more namespaces.
    Each `NSConn` can join to multiple rooms. */
@@ -1387,6 +1396,7 @@ class Conn {
         ErrBadRoom: ErrBadRoom,
         ErrClosed: ErrClosed,
         ErrWrite: ErrWrite,
+        isCloseError: isCloseError,
         reply: reply,
         marshal: marshal
     }
