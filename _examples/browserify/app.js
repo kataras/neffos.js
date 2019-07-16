@@ -1,10 +1,5 @@
 const neffos = require('neffos.js');
 
-var scheme = document.location.protocol == "https:" ? "wss" : "ws";
-var port = document.location.port ? ":" + document.location.port : "";
-
-var wsURL = scheme + "://" + document.location.hostname + port + "/echo";
-
 var outputTxt = document.getElementById("output");
 function addMessage(msg) {
   outputTxt.innerHTML += msg + "\n";
@@ -31,7 +26,7 @@ function handleNamespaceConnectedConn(nsConn) {
 
 async function runExample() {
   try {
-    const conn = await neffos.dial(wsURL, {
+    const conn = await neffos.dial("/echo", {
       default: { // "default" namespace.
         _OnNamespaceConnected: function (nsConn, msg) {
           if (nsConn.conn.wasReconnected()) {

@@ -683,6 +683,13 @@ function dial(endpoint, connHandler, options) {
 // this header key should match the server.ServeHTTP's.
 var websocketReconnectHeaderKey = 'X-Websocket-Reconnect';
 function _dial(endpoint, connHandler, tries, options) {
+    if (isBrowser && endpoint.indexOf("/") == 0) {
+        // if is running from browser and endpoint starts with /
+        // lets try to fix it, useful when developers changing environments and servers.
+        var scheme = document.location.protocol == "https:" ? "wss" : "ws";
+        var port = document.location.port ? ":" + document.location.port : "";
+        endpoint = scheme + "://" + document.location.hostname + port + endpoint;
+    }
     if (endpoint.indexOf("ws") == -1) {
         endpoint = "ws://" + endpoint;
     }
