@@ -572,7 +572,7 @@ class NSConn {
 type MessageHandlerFunc = (c: NSConn, msg: Message) => Error;
 
 
-type Events = Map<string, MessageHandlerFunc>
+type Events = Map<string, MessageHandlerFunc>;
 type Namespaces = Map<string, Events>;
 
 function fireEvent(ns: NSConn, msg: Message): Error {

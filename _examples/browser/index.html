@@ -42,34 +42,46 @@
     }
 
     async function runExample() {
-        // You can omit the "default" and simply define only Events, the namespace will be an empty string"",
-        // however if you decide to make any changes on this example make sure the changes are reflecting inside the ../server.go file as well.
-        try {
-            const conn = await neffos.dial(wsURL, {
-                default: { // "default" namespace.
-                    _OnNamespaceConnected: function (nsConn, msg) {
-                        if (nsConn.conn.wasReconnected()) {
-                            addMessage("re-connected after " + nsConn.conn.reconnectTries.toString() + " trie(s)");
-                        }
+        var events = new Object();
+        events._OnNamespaceConnected = function (nsConn, msg) {
+            if (nsConn.conn.wasReconnected()) {
+                addMessage("re-connected after " + nsConn.conn.reconnectTries.toString() + " trie(s)");
+            }
 
-                        addMessage("connected to namespace: " + msg.Namespace);
-                        handleNamespaceConnectedConn(nsConn);
-                    },
-                    _OnNamespaceDisconnect: function (nsConn, msg) {
-                        addMessage("disconnected from namespace: " + msg.Namespace);
-                    },
-                    chat: function (nsConn, msg) { // "chat" event.
-                        addMessage(msg.Body);
-                    }
-                }
-            }, {
-                    // if > 0 then on network failures it tries to reconnect every 5 seconds, defaults to 0 (disabled).
-                    reconnect: 5000,
-                    // custom headers:
-                    // headers: {
-                    //    'X-Username': 'kataras',
-                    // }
-                });
+            addMessage("connected to namespace: " + msg.Namespace);
+            handleNamespaceConnectedConn(nsConn);
+        }
+
+        events._OnNamespaceDisconnect = function (nsConn, msg) {
+            addMessage("disconnected from namespace: " + msg.Namespace);
+        }
+
+        events.chat = function (nsConn, msg) { // "chat" event.
+            addMessage(msg.Body);
+        }
+
+        /* OR regiter those events as:
+            neffos.dial(wsURL, {default: {
+                chat: function (nsConn, msg) { [...] }
+            }});
+        */
+
+        try {
+            // You can omit the "default" namespace and simply define only Events,
+            // the namespace will be an empty string"",
+            // however if you decide to make any changes on
+            // this example make sure the changes are reflecting inside the ../server.go file as well.
+            //
+            // At "wsURL" you can put the relative URL if the client and server
+            // hosted in the same address, e.g. "/echo".
+            const conn = await neffos.dial(wsURL, { default: events }, {
+                // if > 0 then on network failures it tries to reconnect every 5 seconds, defaults to 0 (disabled).
+                reconnect: 5000,
+                // custom headers:
+                // headers: {
+                //    'X-Username': 'kataras',
+                // }
+            });
 
             // You can either wait to conenct or just conn.connect("connect")
             // and put the `handleNamespaceConnectedConn` inside `_OnNamespaceConnected` callback instead.
