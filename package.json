@@ -1,6 +1,6 @@
 {
     "name": "neffos.js",
-    "version": "0.1.22",
+    "version": "0.1.23",
     "description": "javascript client for the modern neffos websocket framework",
     "keywords": [
         "neffos",
@@ -48,6 +48,7 @@
         "typescript": "^3.4.5"
     },
     "dependencies": {
+        "@sinonjs/text-encoding": "^0.7.1",
         "node-fetch": "^2.6.0",
         "ws": "^7.0.0"
     }

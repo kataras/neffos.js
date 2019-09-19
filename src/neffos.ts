@@ -7,6 +7,7 @@ var _fetch: any = (typeof fetch !== 'undefined') ? fetch : undefined;
 if (!isBrowser) {
     WebSocket = require('ws');
     _fetch = require('node-fetch');
+    TextDecoder = require('@sinonjs/text-encoding').TextDecoder;
 } else {
     WebSocket = window["WebSocket"];
 }
