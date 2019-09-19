@@ -41,7 +41,8 @@ export class Message {
   IsLocal: boolean;
   /* The IsNative reports whether the Message is websocket native messages, only Body is filled. */
   IsNative: boolean;
-
+  /* The SetBinary can be filled to true if the client must send this message using the Binary format message. */
+  SetBinary: boolean;
   /* unmarshal method returns this Message's `Body` as an object,
      equivalent to the Go's `neffos.Message.Unmarshal` method.
      It can be used inside an event's callbacks.

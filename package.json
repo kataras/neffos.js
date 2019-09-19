@@ -1,6 +1,6 @@
 {
     "name": "neffos.js",
-    "version": "0.1.21",
+    "version": "0.1.22",
     "description": "javascript client for the modern neffos websocket framework",
     "keywords": [
         "neffos",

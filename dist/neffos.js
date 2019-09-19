@@ -12,10 +12,11 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
         function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
@@ -119,9 +120,6 @@ function isEmpty(s) {
 var Message = /** @class */ (function () {
     function Message() {
     }
-    /* The SetBinary can be filled to true if the client must send this message using the Binary format message.
-       This field is not filled on sending/receiving. */
-    // SetBinary: boolean;
     Message.prototype.isConnect = function () {
         return this.Event == OnNamespaceConnect || false;
     };
@@ -247,6 +245,8 @@ function splitN(s, sep, limit) {
         return [s];
     }
 }
+var textDecoder = new TextDecoder("utf-8");
+var messageSeparatorCharCode = messageSeparator.charCodeAt(0);
 // <wait>;
 // <namespace>;
 // <room>;
@@ -260,7 +260,29 @@ function deserializeMessage(data, allowNativeMessages) {
         msg.isInvalid = true;
         return msg;
     }
-    var dts = splitN(data, messageSeparator, validMessageSepCount - 1);
+    var isArrayBuffer = data instanceof ArrayBuffer;
+    var dts;
+    if (isArrayBuffer) {
+        var arr = new Uint8Array(data);
+        var sepCount = 1;
+        var lastSepIndex = 0;
+        for (var i = 0; i < arr.length; i++) {
+            if (arr[i] == messageSeparatorCharCode) { // sep char.
+                sepCount++;
+                lastSepIndex = i;
+            }
+        }
+        if (sepCount != validMessageSepCount) {
+            msg.isInvalid = true;
+            return msg;
+        }
+        dts = splitN(textDecoder.decode(arr.slice(0, lastSepIndex)), messageSeparator, validMessageSepCount - 2);
+        dts.push(data.slice(lastSepIndex + 1, data.length));
+        msg.SetBinary = true;
+    }
+    else {
+        dts = splitN(data, messageSeparator, validMessageSepCount - 1);
+    }
     if (dts.length != validMessageSepCount) {
         if (!allowNativeMessages) {
             msg.isInvalid = true;
@@ -287,6 +309,9 @@ function deserializeMessage(data, allowNativeMessages) {
         }
     }
     else {
+        // if (isArrayBuffer) {
+        //     msg.Body = new ArrayBuffer(0);
+        // }
         msg.Body = "";
     }
     msg.isInvalid = false;
@@ -294,6 +319,7 @@ function deserializeMessage(data, allowNativeMessages) {
     msg.IsLocal = false;
     msg.IsNative = (allowNativeMessages && msg.Event == OnNativeMessage) || false;
     // msg.SetBinary = false;
+    // console.log(new TextDecoder("utf-8").decode(msg.Body));
     return msg;
 }
 function genWait() {

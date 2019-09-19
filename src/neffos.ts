@@ -106,9 +106,8 @@ class Message {
     /* The IsNative reports whether the Message is websocket native messages, only Body is filled. */
     IsNative: boolean;
 
-    /* The SetBinary can be filled to true if the client must send this message using the Binary format message.
-	   This field is not filled on sending/receiving. */
-    // SetBinary: boolean;
+    /* The SetBinary can be filled to true if the client must send this message using the Binary format message. */
+    SetBinary: boolean;
 
     isConnect(): boolean {
         return this.Event == OnNamespaceConnect || false;
@@ -256,6 +255,9 @@ function splitN(s: string, sep: string, limit: number): Array<string> {
     }
 }
 
+var textDecoder = new TextDecoder("utf-8");
+var messageSeparatorCharCode = messageSeparator.charCodeAt(0);
+
 // <wait>;
 // <namespace>;
 // <room>;
@@ -263,14 +265,39 @@ function splitN(s: string, sep: string, limit: number): Array<string> {
 // <isError(0-1)>;
 // <isNoOp(0-1)>;
 // <body||error_message>
-function deserializeMessage(data: WSData, allowNativeMessages: boolean): Message {
+function deserializeMessage(data: any, allowNativeMessages: boolean): Message {
     var msg: Message = new Message();
     if (data.length == 0) {
         msg.isInvalid = true;
         return msg;
     }
 
-    let dts = splitN(data, messageSeparator, validMessageSepCount - 1);
+    var isArrayBuffer = data instanceof ArrayBuffer
+    var dts: string[];
+
+    if (isArrayBuffer) {
+        const arr = new Uint8Array(data);
+        let sepCount = 1;
+        let lastSepIndex = 0;
+        for (var i = 0; i < arr.length; i++) {
+            if (arr[i] == messageSeparatorCharCode) { // sep char.
+                sepCount++;
+                lastSepIndex = i;
+            }
+        }
+
+        if (sepCount != validMessageSepCount) {
+            msg.isInvalid = true;
+            return msg;
+        }
+
+        dts = splitN(textDecoder.decode(arr.slice(0, lastSepIndex)), messageSeparator, validMessageSepCount - 2);
+        dts.push(data.slice(lastSepIndex + 1, data.length));
+        msg.SetBinary = true;
+    } else {
+        dts = splitN(data, messageSeparator, validMessageSepCount - 1);
+    }
+
     if (dts.length != validMessageSepCount) {
         if (!allowNativeMessages) {
             msg.isInvalid = true;
@@ -278,18 +305,15 @@ function deserializeMessage(data: WSData, allowNativeMessages: boolean): Message
             msg.Event = OnNativeMessage;
             msg.Body = data;
         }
-
         return msg;
     }
-
     msg.wait = dts[0];
     msg.Namespace = unescapeMessageField(dts[1]);
     msg.Room = unescapeMessageField(dts[2]);
     msg.Event = unescapeMessageField(dts[3]);
     msg.isError = dts[4] == trueString || false;
     msg.isNoOp = dts[5] == trueString || false;
-
-    let body = dts[6];
+    var body = dts[6];
     if (!isEmpty(body)) {
         if (msg.isError) {
             msg.Err = new Error(body);
@@ -297,14 +321,18 @@ function deserializeMessage(data: WSData, allowNativeMessages: boolean): Message
             msg.Body = body;
         }
     } else {
+        // if (isArrayBuffer) {
+        //     msg.Body = new ArrayBuffer(0);
+        // }
         msg.Body = "";
     }
-
     msg.isInvalid = false;
     msg.IsForced = false;
     msg.IsLocal = false;
     msg.IsNative = (allowNativeMessages && msg.Event == OnNativeMessage) || false;
     // msg.SetBinary = false;
+
+    // console.log(new TextDecoder("utf-8").decode(msg.Body));
     return msg;
 }
 
@@ -744,7 +772,7 @@ function _dial(endpoint: string, connHandler: any, tries: number, options?: Opti
         // lets try to fix it, useful when developers changing environments and servers.
         const scheme = document.location.protocol == "https:" ? "wss" : "ws";
         const port = document.location.port ? ":" + document.location.port : "";
-        endpoint = scheme+"://"+document.location.hostname+port+endpoint;
+        endpoint = scheme + "://" + document.location.hostname + port + endpoint;
     }
 
     if (endpoint.indexOf("ws") == -1) {
