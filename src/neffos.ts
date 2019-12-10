@@ -8,7 +8,7 @@ if (!isBrowser) {
     WebSocket = require('ws');
     _fetch = require('node-fetch');
     TextDecoder = require('@sinonjs/text-encoding').TextDecoder;
-    TextEncoder =  require('@sinonjs/text-encoding').TextEncoder;
+    TextEncoder = require('@sinonjs/text-encoding').TextEncoder;
 } else {
     WebSocket = window["WebSocket"];
 }
@@ -436,6 +436,17 @@ class NSConn {
         msg.Namespace = this.namespace;
         msg.Event = event;
         msg.Body = body;
+        return this.conn.write(msg);
+    }
+
+    /* The emitBinary method sends a binary message to the server with its `Message.Namespace` filled to this specific namespace
+       and `Message.SetBinary` to true. */
+    emitBinary(event: string, body: WSData): boolean {
+        let msg = new Message();
+        msg.Namespace = this.namespace;
+        msg.Event = event;
+        msg.Body = body;
+        msg.SetBinary = true;
         return this.conn.write(msg);
     }
 

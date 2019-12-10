@@ -407,6 +407,16 @@ var NSConn = /** @class */ (function () {
         msg.Body = body;
         return this.conn.write(msg);
     };
+    /* The emitBinary method sends a binary message to the server with its `Message.Namespace` filled to this specific namespace
+       and `Message.SetBinary` to true. */
+    NSConn.prototype.emitBinary = function (event, body) {
+        var msg = new Message();
+        msg.Namespace = this.namespace;
+        msg.Event = event;
+        msg.Body = body;
+        msg.SetBinary = true;
+        return this.conn.write(msg);
+    };
     /* See `Conn.ask`. */
     NSConn.prototype.ask = function (event, body) {
         var msg = new Message();

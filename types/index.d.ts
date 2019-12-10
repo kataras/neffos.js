@@ -68,6 +68,9 @@ export class Room {
   /* The emit method sends a message to the server with its `Message.Room` filled to this specific room
      and `Message.Namespace` to the underline `NSConn`'s namespace. */
   emit(event: string, body: WSData): boolean;
+  /* The emitBinary method sends a binary message to the server with its `Message.Namespace` filled to this specific namespace
+   and `Message.SetBinary` to true. */
+  emitBinary(event: string, body: WSData): boolean;
   /* The leave method sends a local and server room leave signal `OnRoomLeave`
      and if succeed it fires the OnRoomLeft` event. */
   leave(): Promise<Error>;
