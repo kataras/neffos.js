@@ -1,6 +1,6 @@
 {
     "name": "neffos.js",
-    "version": "0.1.23",
+    "version": "0.1.24",
     "description": "javascript client for the modern neffos websocket framework",
     "keywords": [
         "neffos",
@@ -15,6 +15,7 @@
         "minify": "minify ./dist/neffos.js --outFile ./dist/neffos.min.js",
         "dtslint": "dtslint --onlyTestTsNext ./types",
         "build": "npm run-script dtslint && npm run-script toJS && npm run-script minify",
+        "build-fast": "npm run-script toJS",
         "lint": "node_modules/.bin/goodparts ./src"
     },
     "source": "./src/neffos.ts",

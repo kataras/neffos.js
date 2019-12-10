@@ -57,6 +57,7 @@ if (!isBrowser) {
     WebSocket = require('ws');
     _fetch = require('node-fetch');
     TextDecoder = require('@sinonjs/text-encoding').TextDecoder;
+    TextEncoder = require('@sinonjs/text-encoding').TextEncoder;
 }
 else {
     WebSocket = window["WebSocket"];
@@ -206,6 +207,9 @@ function isReply(err) {
     // https://github.com/Microsoft/TypeScript/wiki/FAQ#why-doesnt-extending-built-ins-like-error-array-and-map-work
     return (err instanceof replyError);
 }
+var textEncoder = new TextEncoder();
+var textDecoder = new TextDecoder("utf-8");
+var messageSeparatorCharCode = messageSeparator.charCodeAt(0);
 function serializeMessage(msg) {
     if (msg.IsNative && isEmpty(msg.wait)) {
         return msg.Body;
@@ -222,15 +226,32 @@ function serializeMessage(msg) {
     if (msg.isNoOp) {
         isNoOpString = trueString;
     }
-    return [
+    var data = [
         msg.wait || "",
         escapeMessageField(msg.Namespace),
         escapeMessageField(msg.Room),
         escapeMessageField(msg.Event),
         isErrorString,
         isNoOpString,
-        body
+        "" // body
     ].join(messageSeparator);
+    if (msg.SetBinary) {
+        // body is already in the form we need,
+        // so:
+        var b = textEncoder.encode(data);
+        data = new Uint8Array(b.length + body.length);
+        data.set(b, 0);
+        data.set(body, b.length);
+    }
+    else {
+        // If not specified to send as binary message,
+        // then don't send as binary.
+        if (body instanceof Uint8Array) {
+            body = textDecoder.decode(body, { stream: false });
+        }
+        data += body;
+    }
+    return data;
 }
 // behaves like Go's SplitN, default javascript's does not return the remainder and we need this for the dts[6]
 function splitN(s, sep, limit) {
@@ -246,8 +267,6 @@ function splitN(s, sep, limit) {
         return [s];
     }
 }
-var textDecoder = new TextDecoder("utf-8");
-var messageSeparatorCharCode = messageSeparator.charCodeAt(0);
 // <wait>;
 // <namespace>;
 // <room>;
@@ -271,13 +290,16 @@ function deserializeMessage(data, allowNativeMessages) {
             if (arr[i] == messageSeparatorCharCode) { // sep char.
                 sepCount++;
                 lastSepIndex = i;
+                if (sepCount == validMessageSepCount) {
+                    break;
+                }
             }
         }
         if (sepCount != validMessageSepCount) {
             msg.isInvalid = true;
             return msg;
         }
-        dts = splitN(textDecoder.decode(arr.slice(0, lastSepIndex)), messageSeparator, validMessageSepCount - 2);
+        dts = splitN(textDecoder.decode(arr.slice(0, lastSepIndex), { stream: false }), messageSeparator, validMessageSepCount - 2);
         dts.push(data.slice(lastSepIndex + 1, data.length));
         msg.SetBinary = true;
     }
@@ -319,8 +341,6 @@ function deserializeMessage(data, allowNativeMessages) {
     msg.IsForced = false;
     msg.IsLocal = false;
     msg.IsNative = (allowNativeMessages && msg.Event == OnNativeMessage) || false;
-    // msg.SetBinary = false;
-    // console.log(new TextDecoder("utf-8").decode(msg.Body));
     return msg;
 }
 function genWait() {
