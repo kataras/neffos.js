@@ -1,6 +1,7 @@
 {
     "name": "neffos.js",
-    "version": "0.1.27",
+    "type": "module",
+    "version": "0.1.29",
     "description": "javascript client for the modern neffos websocket framework",
     "keywords": [
         "neffos",
@@ -12,8 +13,8 @@
         "iris web framework"
     ],
     "scripts": {
-        "toJS": "tsc --target es6 -module commonjs --sourceMap --outDir ./dist ./src/neffos.ts",
-        "minify": "minify ./dist/neffos.js --outFile ./dist/neffos.min.js",
+        "toJS": "tsc --project tsconfig.json",
+        "minify": "minify --sourceType=module ./dist/neffos.js --outFile ./dist/neffos.min.js",
         "dtslint": "dtslint --onlyTestTsNext ./types",
         "build": "npm run-script dtslint && npm run-script toJS && npm run-script minify",
         "build-fast": "npm run-script toJS",

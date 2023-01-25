@@ -3,10 +3,10 @@
 // so all works and minimum changes were required to achieve that result.
 // See the `genWait()` too.
 const isBrowser = (typeof window !== 'undefined');
-var _fetch: any = (typeof fetch !== 'undefined') ? fetch : undefined;
+
+var _fetch: any = (typeof fetch !== 'undefined') ? fetch : undefined; // by node >= 17.5 this is supprted, no need of node-fetch.
 if (!isBrowser) {
     WebSocket = require('ws');
-    _fetch = require('node-fetch');
     TextDecoder = require('@sinonjs/text-encoding').TextDecoder;
     TextEncoder = require('@sinonjs/text-encoding').TextEncoder;
 } else {
@@ -1430,55 +1430,91 @@ class Conn {
     }
 }
 
-(function () {
-    // interface Neffos {
-    //     dial(...)
-    // }
+// (function () {
+// interface Neffos {
+//     dial(...)
+// }
 
 
-    // const neffos: Neffos = {
-    //    dial:dial,
-    // }
+// const neffos: Neffos = {
+//    dial:dial,
+// }
 
 
-    const neffos = {
-        // main functions.
-        dial: dial,
-        isSystemEvent: isSystemEvent,
-        // constants (events).
-        OnNamespaceConnect: OnNamespaceConnect,
-        OnNamespaceConnected: OnNamespaceConnected,
-        OnNamespaceDisconnect: OnNamespaceDisconnect,
-        OnRoomJoin: OnRoomJoin,
-        OnRoomJoined: OnRoomJoined,
-        OnRoomLeave: OnRoomLeave,
-        OnRoomLeft: OnRoomLeft,
-        OnAnyEvent: OnAnyEvent,
-        OnNativeMessage: OnNativeMessage,
-        // classes.
-        Message: Message,
-        Room: Room,
-        NSConn: NSConn,
-        Conn: Conn,
-        // errors.
-        ErrInvalidPayload: ErrInvalidPayload,
-        ErrBadNamespace: ErrBadNamespace,
-        ErrBadRoom: ErrBadRoom,
-        ErrClosed: ErrClosed,
-        ErrWrite: ErrWrite,
-        isCloseError: isCloseError,
-        reply: reply,
-        marshal: marshal
-    }
+const neffos = {
+    // main functions.
+    dial: dial,
+    isSystemEvent: isSystemEvent,
+    // constants (events).
+    OnNamespaceConnect: OnNamespaceConnect,
+    OnNamespaceConnected: OnNamespaceConnected,
+    OnNamespaceDisconnect: OnNamespaceDisconnect,
+    OnRoomJoin: OnRoomJoin,
+    OnRoomJoined: OnRoomJoined,
+    OnRoomLeave: OnRoomLeave,
+    OnRoomLeft: OnRoomLeft,
+    OnAnyEvent: OnAnyEvent,
+    OnNativeMessage: OnNativeMessage,
+    // classes.
+    Message: Message,
+    Room: Room,
+    NSConn: NSConn,
+    Conn: Conn,
+    // errors.
+    ErrInvalidPayload: ErrInvalidPayload,
+    ErrBadNamespace: ErrBadNamespace,
+    ErrBadRoom: ErrBadRoom,
+    ErrClosed: ErrClosed,
+    ErrWrite: ErrWrite,
+    isCloseError: isCloseError,
+    reply: reply,
+    marshal: marshal
+};
 
-    if (typeof exports !== 'undefined') {
-        exports = neffos;
-        module.exports = neffos
-    } else {
-        var root = typeof self == 'object' && self.self === self && self ||
-            typeof global == 'object' && global.global === global && global;
+// if (typeof exports !== 'undefined') {
+//     exports = neffos;
+//     module.exports = neffos
+// } else {
+//     var root = typeof self == 'object' && self.self === self && self ||
+//         typeof global == 'object' && global.global === global && global;
 
-        // as a browser global.
-        root["neffos"] = neffos;
-    }
-}());
+//     // as a browser global.
+//     root["neffos"] = neffos;
+// }
+
+var root = typeof self == 'object' && self.self === self && self ||
+    typeof global == 'object' && global.global === global && global;
+
+// as a browser global.
+root["neffos"] = neffos;
+
+export {
+    dial,
+    isSystemEvent,
+    //
+    OnNamespaceConnect,
+    OnNamespaceConnected,
+    OnNamespaceDisconnect,
+    OnRoomJoin,
+    OnRoomJoined,
+    OnRoomLeave,
+    OnRoomLeft,
+    OnAnyEvent,
+    OnNativeMessage,
+    //
+    Message,
+    Room,
+    NSConn,
+    Conn,
+    //
+    ErrInvalidPayload,
+    ErrBadNamespace,
+    ErrBadRoom,
+    ErrClosed,
+    ErrWrite,
+    isCloseError,
+    reply,
+    marshal,
+};
+
+// }());
