@@ -15,26 +15,20 @@ $ npm install --save neffos.js
 ```
 
 ```js
-const neffos = require('neffos.js');
+import * as neffos from `neffos.js`
 ```
 
 ### Browsers
 
-Development:
-
-```html
-<script src="//cdn.jsdelivr.net/npm/neffos.js@X.X.X/dist/neffos.js"></script>
-```
-
 Production:
 
 ```html
-<script src="//cdn.jsdelivr.net/npm/neffos.js@X.X.X/dist/neffos.min.js"></script>
+<script src="//cdn.jsdelivr.net/npm/neffos.js@latest/dist/neffos-es5.js"></script>
 ```
 
-**Remember** to replace the version tag with the exact release your project depends upon.
+**Remember** to replace the version part with the exact release your project depends upon.
 
-The library supports CommonJS loader and also exports globally as `neffos`.
+The ES5 version supports CommonJS loader and also exports globally as `neffos`.
 
 ## Install Definition File
 
