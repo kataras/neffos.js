@@ -13,21 +13,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 // See the `genWait()` too.
 const isBrowser = (typeof window !== 'undefined');
 var _fetch = (typeof fetch !== 'undefined') ? fetch : undefined; // by node >= 17.5 this is supprted, no need of node-fetch.
-var WebSocket = (typeof WebSocket !== 'undefined') ? WebSocket : undefined;
-// if (!isBrowser) {
-//     WebSocket = require('ws');
-//     TextDecoder = require('@sinonjs/text-encoding').TextDecoder;
-//     TextEncoder = require('@sinonjs/text-encoding').TextEncoder;
-// } else {
-//     WebSocket = window["WebSocket"];
-// }
-//
-// NOTE: 24 Jan 2023.
-// Nowadays node has its own textdecoder and encoder.
-// import {TextDecoder, TextEncoder } from 'util';
-import * as nodeWS from 'ws';
 if (!isBrowser) {
-    WebSocket = nodeWS.WebSocket;
+    WebSocket = require('ws');
+    TextDecoder = require('@sinonjs/text-encoding').TextDecoder;
+    TextEncoder = require('@sinonjs/text-encoding').TextEncoder;
 }
 else {
     WebSocket = window["WebSocket"];
