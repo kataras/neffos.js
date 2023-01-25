@@ -8,7 +8,7 @@ $ cd ./nodejs && node node_client.js # start the nodejs neffos client.
 
 ## Server
 
-Server-side requires the [go(lang)](https://golang.org/dl) in order to run and edit.
+Server-side requires the [go(lang)](https://go.dev/dl) in order to run and edit.
 
 ## Clients
 

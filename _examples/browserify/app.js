@@ -1,4 +1,4 @@
-const neffos = require('neffos.js');
+import * as neffos from "neffos.js";
 
 var outputTxt = document.getElementById("output");
 function addMessage(msg) {

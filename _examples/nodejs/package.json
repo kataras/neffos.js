@@ -1,5 +1,6 @@
 {
     "name": "neffos.js.example.nodejs",
+    "type": "module",
     "version": "0.0.1",
     "main": "node_client.js",
     "dependencies": {

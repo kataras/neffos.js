@@ -10,6 +10,7 @@
         "outDir": "./dist",
         "target": "es6",
         "module": "es6",
+        "moduleResolution": "classic",
         "sourceMap": true,
         "explainFiles": false
     }

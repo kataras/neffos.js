@@ -1,9 +1,9 @@
 /// <reference path="../../types/index.d.ts" />
-const neffos = require('neffos.js');
+import * as neffos from "neffos.js";
 
 const stdin = process.openStdin();
 
-const wsURL = "ws://localhost:8080/echo";
+const wsURL = "ws://127.0.0.1:8080/echo";
 
 async function runExample() {
   try {
