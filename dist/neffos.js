@@ -313,7 +313,7 @@ function genWait() {
         return waitComesFromClientPrefix + hrTime[0] * 1000000000 + hrTime[1];
     }
     else {
-        let now = window.performance.now();
+        let now = window.performance.now() + (Math.random() * 1000000);
         return waitComesFromClientPrefix + now.toString();
     }
 }
