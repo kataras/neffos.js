@@ -1,12 +1,3 @@
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 // Make it compatible to run with browser and inside nodejs
 // the good thing is that the node's WebSocket module has the same API as the browser's one,
 // so all works and minimum changes were required to achieve that result.
@@ -25,12 +16,13 @@ var WebSocket = (typeof WebSocket !== 'undefined') ? WebSocket : undefined;
 // NOTE: 24 Jan 2023.
 // Nowadays node has its own textdecoder and encoder.
 // import {TextDecoder, TextEncoder } from 'util';
-import * as nodeWS from 'ws';
-if (!isBrowser) {
-    WebSocket = nodeWS.WebSocket;
-}
-else {
-    WebSocket = window["WebSocket"];
+if (!WebSocket) {
+    if (!isBrowser) {
+        WebSocket = await import('ws');
+    }
+    else {
+        WebSocket = window["WebSocket"];
+    }
 }
 /* The OnNamespaceConnect is the event name that it's fired on before namespace connect. */
 const OnNamespaceConnect = "_OnNamespaceConnect";
@@ -390,10 +382,8 @@ class NSConn {
     }
     /* The joinRoom method can be used to join to a specific room, rooms are dynamic.
        Returns a `Room` or an error. */
-    joinRoom(roomName) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return yield this.askRoomJoin(roomName);
-        });
+    async joinRoom(roomName) {
+        return await this.askRoomJoin(roomName);
     }
     /* The room method returns a joined `Room`. */
     room(roomName) {
@@ -407,23 +397,21 @@ class NSConn {
     //     return rooms;
     // }
     /* The leaveAll method sends a leave room signal to all rooms and fires the `OnRoomLeave` and `OnRoomLeft` (if no error occurred) events. */
-    leaveAll() {
-        return __awaiter(this, void 0, void 0, function* () {
-            let leaveMsg = new Message();
-            leaveMsg.Namespace = this.namespace;
-            leaveMsg.Event = OnRoomLeft;
-            leaveMsg.IsLocal = true;
-            this.rooms.forEach((value, roomName) => __awaiter(this, void 0, void 0, function* () {
-                leaveMsg.Room = roomName;
-                try {
-                    yield this.askRoomLeave(leaveMsg);
-                }
-                catch (err) {
-                    return err;
-                }
-            }));
-            return null;
+    async leaveAll() {
+        let leaveMsg = new Message();
+        leaveMsg.Namespace = this.namespace;
+        leaveMsg.Event = OnRoomLeft;
+        leaveMsg.IsLocal = true;
+        this.rooms.forEach(async (value, roomName) => {
+            leaveMsg.Room = roomName;
+            try {
+                await this.askRoomLeave(leaveMsg);
+            }
+            catch (err) {
+                return err;
+            }
         });
+        return null;
     }
     forceLeaveAll(isLocal) {
         let leaveMsg = new Message();
@@ -448,7 +436,7 @@ class NSConn {
         return this.conn.askDisconnect(disconnectMsg);
     }
     askRoomJoin(roomName) {
-        return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
+        return new Promise(async (resolve, reject) => {
             let room = this.rooms.get(roomName);
             if (room !== undefined) {
                 resolve(room);
@@ -460,7 +448,7 @@ class NSConn {
             joinMsg.Event = OnRoomJoin;
             joinMsg.IsLocal = true;
             try {
-                yield this.conn.ask(joinMsg);
+                await this.conn.ask(joinMsg);
             }
             catch (err) {
                 reject(err);
@@ -476,28 +464,26 @@ class NSConn {
             joinMsg.Event = OnRoomJoined;
             fireEvent(this, joinMsg);
             resolve(room);
-        }));
-    }
-    askRoomLeave(msg) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (!this.rooms.has(msg.Room)) {
-                return ErrBadRoom;
-            }
-            try {
-                yield this.conn.ask(msg);
-            }
-            catch (err) {
-                return err;
-            }
-            let err = fireEvent(this, msg);
-            if (!isEmpty(err)) {
-                return err;
-            }
-            this.rooms.delete(msg.Room);
-            msg.Event = OnRoomLeft;
-            fireEvent(this, msg);
-            return null;
         });
+    }
+    async askRoomLeave(msg) {
+        if (!this.rooms.has(msg.Room)) {
+            return ErrBadRoom;
+        }
+        try {
+            await this.conn.ask(msg);
+        }
+        catch (err) {
+            return err;
+        }
+        let err = fireEvent(this, msg);
+        if (!isEmpty(err)) {
+            return err;
+        }
+        this.rooms.delete(msg.Room);
+        msg.Event = OnRoomLeft;
+        fireEvent(this, msg);
+        return null;
     }
     replyRoomJoin(msg) {
         if (isEmpty(msg.wait) || msg.isNoOp) {
@@ -966,12 +952,12 @@ class Conn {
         if (isNull(this.waitServerConnectNotifiers)) {
             this.waitServerConnectNotifiers = new Map();
         }
-        return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
+        return new Promise(async (resolve, reject) => {
             this.waitServerConnectNotifiers.set(namespace, () => {
                 this.waitServerConnectNotifiers.delete(namespace);
                 resolve(this.namespace(namespace));
             });
-        }));
+        });
     }
     /* The namespace method returns an already connected `NSConn`. */
     namespace(namespace) {
@@ -1048,7 +1034,7 @@ class Conn {
     //     }
     // }
     askConnect(namespace) {
-        return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
+        return new Promise(async (resolve, reject) => {
             let ns = this.namespace(namespace);
             if (ns !== undefined) { // it's already connected.
                 resolve(ns);
@@ -1072,7 +1058,7 @@ class Conn {
                 return;
             }
             try {
-                yield this.ask(connectMessage);
+                await this.ask(connectMessage);
             }
             catch (err) {
                 reject(err);
@@ -1082,25 +1068,23 @@ class Conn {
             connectMessage.Event = OnNamespaceConnected;
             fireEvent(ns, connectMessage);
             resolve(ns);
-        }));
-    }
-    askDisconnect(msg) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let ns = this.namespace(msg.Namespace);
-            if (ns === undefined) { // it's already connected.
-                return ErrBadNamespace;
-            }
-            try {
-                yield this.ask(msg);
-            }
-            catch (err) {
-                return err;
-            }
-            ns.forceLeaveAll(true);
-            this.connectedNamespaces.delete(msg.Namespace);
-            msg.IsLocal = true;
-            return fireEvent(ns, msg);
         });
+    }
+    async askDisconnect(msg) {
+        let ns = this.namespace(msg.Namespace);
+        if (ns === undefined) { // it's already connected.
+            return ErrBadNamespace;
+        }
+        try {
+            await this.ask(msg);
+        }
+        catch (err) {
+            return err;
+        }
+        ns.forceLeaveAll(true);
+        this.connectedNamespaces.delete(msg.Namespace);
+        msg.IsLocal = true;
+        return fireEvent(ns, msg);
     }
     /* The isClosed method reports whether this connection is closed. */
     isClosed() {

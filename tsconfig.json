@@ -8,8 +8,8 @@
     ],
     "compilerOptions": {
         "outDir": "./dist",
-        "target": "es6",
-        "module": "es6",
+        "target": "es2020",
+        "module": "es2022",
         "moduleResolution": "classic",
         "sourceMap": true,
         "explainFiles": false
