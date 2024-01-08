@@ -22,7 +22,7 @@ var WebSocket = (typeof WebSocket !== 'undefined') ? WebSocket : undefined;
 import * as nodeWS from 'ws';
 if (!isBrowser) {
     WebSocket = nodeWS.WebSocket;
-}else{
+} else {
     WebSocket = window["WebSocket"];
 }
 
@@ -377,7 +377,7 @@ function genWait(): string {
         let hrTime = process.hrtime();
         return waitComesFromClientPrefix + hrTime[0] * 1000000000 + hrTime[1];
     } else {
-        let now = window.performance.now();
+        let now = window.performance.now() + (Math.random() * 1000000);
         return waitComesFromClientPrefix + now.toString();
     }
 }
