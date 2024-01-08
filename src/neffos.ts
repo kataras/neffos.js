@@ -19,9 +19,9 @@ var WebSocket = (typeof WebSocket !== 'undefined') ? WebSocket : undefined;
 // Nowadays node has its own textdecoder and encoder.
 // import {TextDecoder, TextEncoder } from 'util';
 
-import * as nodeWS from 'ws';
+
 if (!isBrowser) {
-    WebSocket = nodeWS.WebSocket;
+    WebSocket = require('ws');
 } else {
     WebSocket = window["WebSocket"];
 }
