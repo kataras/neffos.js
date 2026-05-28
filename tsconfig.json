@@ -4,14 +4,19 @@
     ],
     "exclude": [
         "node_modules",
-        "types"
+        "types",
+        "tests"
     ],
     "compilerOptions": {
         "outDir": "./dist",
-        "target": "es6",
-        "module": "es6",
-        "moduleResolution": "classic",
+        "target": "es2022",
+        "module": "es2022",
+        "moduleResolution": "node",
+        "lib": ["es2022", "dom"],
         "sourceMap": true,
+        "declaration": false,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
         "explainFiles": false
     }
 }

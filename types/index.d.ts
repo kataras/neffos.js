@@ -72,8 +72,8 @@ export class Room {
    and `Message.SetBinary` to true. */
   emitBinary(event: string, body: WSData): boolean;
   /* The leave method sends a local and server room leave signal `OnRoomLeave`
-     and if succeed it fires the OnRoomLeft` event. */
-  leave(): Promise<Error>;
+     and if succeed it fires the `OnRoomLeft` event. Resolves with null on success. */
+  leave(): Promise<Error | null>;
 }
 /* The NSConn describes a connected connection to a specific namespace,
    it emits with the `Message.Namespace` filled and it can join to multiple rooms.
@@ -89,6 +89,9 @@ export class NSConn {
   constructor(conn: Conn, namespace: string, events: Events);
   /* The emit method sends a message to the server with its `Message.Namespace` filled to this specific namespace. */
   emit(event: string, body: WSData): boolean;
+  /* The emitBinary method sends a binary message to the server with its `Message.Namespace`
+     filled to this specific namespace and `Message.SetBinary` set to true. */
+  emitBinary(event: string, body: WSData | Uint8Array): boolean;
   /* See `Conn.ask`. */
   ask(event: string, body: WSData): Promise<Message>;
   /* The joinRoom method can be used to join to a specific room, rooms are dynamic.
@@ -96,10 +99,12 @@ export class NSConn {
   joinRoom(roomName: string): Promise<Room>;
   /* The room method returns a joined `Room`. */
   room(roomName: string): Room;
-  /* The leaveAll method sends a leave room signal to all rooms and fires the `OnRoomLeave` and `OnRoomLeft` (if no error occurred) events. */
-  leaveAll(): Promise<Error>;
-  /* The disconnect method sends a disconnect signal to the server and fires the `OnNamespaceDisconnect` event. */
-  disconnect(): Promise<Error>;
+  /* The leaveAll method sends a leave room signal to all rooms and fires the `OnRoomLeave` and `OnRoomLeft` (if no error occurred) events.
+     Resolves with null on full success or the first error encountered (all leaves are still awaited). */
+  leaveAll(): Promise<Error | null>;
+  /* The disconnect method sends a disconnect signal to the server and fires the `OnNamespaceDisconnect` event.
+     Resolves with null on success or an Error on failure. */
+  disconnect(): Promise<Error | null>;
 }
 
 /* The MessageHandlerFunc is the definition type of the events' callback.
@@ -124,7 +129,10 @@ export interface Headers {
 export interface Options {
   headers?: Headers;
   protocols?: string[];
-  reconnnect?: number;
+  /* reconnect, in milliseconds. When set to a positive value, the client
+     attempts to re-establish the connection and rejoin its previously connected
+     namespaces (and rooms) automatically. Set to 0 (or omit) to disable. */
+  reconnect?: number;
 }
 
 /* The dial function returns a neffos client, a new `Conn` instance.
