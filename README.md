@@ -87,7 +87,7 @@ Handlers may be synchronous or `async`. A handler can return nothing, an
 `Error` (sent back to the server as the event's error), or throw; a thrown
 error is caught and sent back the same way.
 
-A matching neffos Go server for this client lives at [kataras/neffos/_examples/01-getting-started](https://github.com/kataras/neffos/tree/master/_examples/01-getting-started), and a full example tree including the server is at [_examples/](_examples).
+A matching neffos Go server for this client lives at [kataras/neffos/_examples/01-getting-started](https://github.com/kataras/neffos/tree/main/_examples/01-getting-started), and a full example tree including the server is at [_examples/](_examples).
 
 ## Options
 
