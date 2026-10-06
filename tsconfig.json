@@ -1,22 +1,24 @@
 {
     "include": [
-        "src/**/*"
-    ],
-    "exclude": [
-        "node_modules",
-        "types",
-        "tests"
+        "src/**/*",
+        "tests/**/*",
+        "scripts/**/*",
+        "*.config.ts"
     ],
     "compilerOptions": {
-        "outDir": "./dist",
         "target": "es2022",
-        "module": "es2022",
-        "moduleResolution": "node",
+        "module": "esnext",
+        "moduleResolution": "bundler",
         "lib": ["es2022", "dom"],
-        "sourceMap": true,
-        "declaration": false,
+        "types": ["node"],
+        "strict": true,
+        "useUnknownInCatchVariables": true,
+        "noUncheckedIndexedAccess": true,
+        "noImplicitOverride": true,
+        "verbatimModuleSyntax": true,
+        "isolatedModules": true,
         "esModuleInterop": true,
         "skipLibCheck": true,
-        "explainFiles": false
+        "noEmit": true
     }
 }

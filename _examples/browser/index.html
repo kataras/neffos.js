@@ -1,120 +1,94 @@
-<!-- the message's input -->
-<input id="input" type="text" />
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>neffos.js browser example</title>
+<!--
+  Shows: the neffos.js global build (the `neffos` object a plain <script>
+  tag exposes), dialing a Go server, joining a room and chatting in it.
 
-<!-- when clicked then a websocket event will be sent to the server, at this example we registered the 'chat' -->
-<button id="sendBtn" disabled>Send</button>
+  Run it: `cd ../server && go run .`, then open http://localhost:8080.
+  The script below loads the library from /dist/ (served locally by that
+  Go server) because neffos.js 0.3.0 is not published yet; once it is,
+  swap the <script src="/dist/..."> line below for the commented jsdelivr
+  one further down.
 
-<!-- the messages will be shown here -->
-<pre id="output"></pre>
-<!-- import the iris client-side library for browser from a CDN or locally.
-     However, `neffos.(min.)js` is a NPM package too so alternatively,
-     you can use it as dependency on your package.json and all nodejs-npm tooling become available:
-     see the "browserify" example for more-->
+  Try it: open this page in two tabs, type a name and a room, and send a
+  few messages. Each tab sees the other's messages and its join/leave.
 
-<!-- Usually you should prefer neffos.js or neffos.min.js (es6, latest) instead of neffos-es5,
-     see the browserify example for more.-->
-<script src="//cdn.jsdelivr.net/npm/neffos.js@latest/dist/neffos-es5.js"></script>
+  Read next: ../node/client.mjs for the same chat from a terminal, or
+  ../bundler/ for a build-tool setup instead of a <script> tag.
+-->
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; }
+  #log { border: 1px solid #ccc; height: 240px; overflow-y: auto; padding: 0.5rem; margin-bottom: 0.5rem; }
+  #log p { margin: 0.25rem 0; }
+  form { display: flex; gap: 0.5rem; }
+  input { flex: 1; padding: 0.4rem; }
+</style>
+</head>
+<body>
+<h1>neffos.js browser example</h1>
+<p>Name: <input id="name" value="guest" size="10" /> Room: <input id="room" value="lobby" size="10" /></p>
+<div id="log"></div>
+<form id="chat-form">
+  <input id="message" placeholder="Type a message and press enter" autocomplete="off" />
+</form>
 
+<script src="/dist/neffos.global.min.js"></script>
+<!-- Once 0.3.0 is published, use the CDN build instead of the local one above:
+<script src="https://cdn.jsdelivr.net/npm/neffos.js@0.3/dist/neffos.global.min.js"></script>
+-->
 <script>
-    // `neffos` global variable is available now.
-    var scheme = document.location.protocol == "https:" ? "wss" : "ws";
-    var port = document.location.port ? ":" + document.location.port : "";
-    var wsURL = scheme + "://" + document.location.hostname + port + "/echo";
+  // Top-level await is not available in a plain <script> tag, so the setup
+  // runs inside an async function instead.
+  (async function main() {
+    const log = document.getElementById('log');
+    const print = (text) => {
+      const p = document.createElement('p');
+      p.textContent = text;
+      log.appendChild(p);
+      log.scrollTop = log.scrollHeight;
+    };
 
-    var outputTxt = document.getElementById("output");
-    function addMessage(msg) {
-        outputTxt.innerHTML += msg + "\n";
-    }
+    const name = document.getElementById('name').value;
+    const roomName = document.getElementById('room').value;
 
-    function handleError(reason) {
-        console.log(reason);
-        window.alert(reason);
-    }
+    const conn = await neffos.dial('ws://localhost:8080/ws', {
+      default: {
+        _OnNamespaceConnected(ns, msg) {
+          print(`connected to namespace [${msg.Namespace}]`);
+        },
+        _OnNamespaceDisconnect() {
+          print('disconnected');
+        },
+        _OnRoomJoined(ns, msg) {
+          print(`joined room [${msg.Room}]`);
+        },
+        chat(ns, msg) {
+          print(msg.text());
+        },
+      },
+    });
 
-    function handleNamespaceConnectedConn(nsConn) {
-        let inputTxt = document.getElementById("input");
-        let sendBtn = document.getElementById("sendBtn");
+    const ns = await conn.connect('default');
+    await ns.joinRoom(roomName);
 
-        sendBtn.disabled = false;
-        sendBtn.onclick = function () {
-            const input = inputTxt.value;
-            inputTxt.value = "";
-            nsConn.emit("chat", input);
-            addMessage("Me: " + input);
-        };
-    }
-
-    async function runExample() {
-        var events = new Object();
-        events._OnNamespaceConnected = function (nsConn, msg) {
-            if (nsConn.conn.wasReconnected()) {
-                addMessage("re-connected after " + nsConn.conn.reconnectTries.toString() + " trie(s)");
-            }
-
-            addMessage("connected to namespace: " + msg.Namespace);
-            handleNamespaceConnectedConn(nsConn);
-        }
-
-        events._OnNamespaceDisconnect = function (nsConn, msg) {
-            addMessage("disconnected from namespace: " + msg.Namespace);
-        }
-
-        events.chat = function (nsConn, msg) { // "chat" event.
-            addMessage(msg.Body);
-        }
-
-        /* OR regiter those events as:
-            neffos.dial(wsURL, {default: {
-                chat: function (nsConn, msg) { [...] }
-            }});
-        */
-
-        try {
-            // You can omit the "default" namespace and simply define only Events,
-            // the namespace will be an empty string"",
-            // however if you decide to make any changes on
-            // this example make sure the changes are reflecting inside the ../server.go file as well.
-            //
-            // At "wsURL" you can put the relative URL if the client and server
-            // hosted in the same address, e.g. "/echo".
-            const conn = await neffos.dial(wsURL, { default: events }, {
-                // if > 0 then on network failures it tries to reconnect every 5 seconds, defaults to 0 (disabled).
-                reconnect: 5000,
-                // custom headers:
-                // headers: {
-                //    'X-Username': 'kataras',
-                // }
-            });
-
-            // You can either wait to conenct or just conn.connect("connect")
-            // and put the `handleNamespaceConnectedConn` inside `_OnNamespaceConnected` callback instead.
-            // const nsConn = await conn.connect("default");
-            // handleNamespaceConnectedConn(nsConn);
-            conn.connect("default");
-
-        } catch (err) {
-            handleError(err);
-        }
-    }
-
-    runExample();
-
-    // If "await" and "async" are available, use them instead^, all modern browsers support those,
-    // so all of the examples will be written using async/await method instead of promise then/catch callbacks.
-    // A usage example of promise then/catch follows:
-    // neffos.dial(wsURL, {
-    //     default: { // "default" namespace.
-    //         _OnNamespaceConnected: function (ns, msg) {
-    //             addMessage("connected to namespace: " + msg.Namespace);
-    //         },
-    //         _OnNamespaceDisconnect: function (ns, msg) {
-    //             addMessage("disconnected from namespace: " + msg.Namespace);
-    //         },
-    //         chat: function (ns, msg) { // "chat" event.
-    //             addMessage(msg.Body);
-    //         }
-    //     }
-    // }).then(function (conn) {
-    //     conn.connect("default").then(handleNamespaceConnectedConn).catch(handleError);
-    // }).catch(handleError);
+    const form = document.getElementById('chat-form');
+    const input = document.getElementById('message');
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const text = input.value.trim();
+      if (text === '') {
+        return;
+      }
+      ns.room(roomName)?.emit('chat', `${name}: ${text}`);
+      input.value = '';
+    });
+  })().catch((err) => {
+    console.error(err);
+    alert(`failed to connect: ${err.message}`);
+  });
 </script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>neffos.js bundler example</title>
+<!--
+  Shows: the page half of the esbuild bundling setup. app.js imports
+  "neffos.js" as a bare specifier and is bundled into bundle.js, which this
+  page loads as a module script; there is no CDN or <script> global here.
+
+  Run it: in this directory, `npm install && npm run build` (the build step
+  is `esbuild app.js --bundle --format=esm --outfile=bundle.js`, see
+  app.js). Start ../server (`go run .` there) and open
+  http://localhost:8080/bundler/. Opening this file straight from disk does
+  not work: browsers block module scripts on file:// pages.
+
+  Try it: join the "lobby" room by sending a message; a tab of ../browser
+  or a run of ../node/client.mjs in the same room sees it.
+
+  Read next: app.js for the bundled code, or ../browser/index.html for the
+  same chat loaded from a plain <script> tag instead.
+-->
+
+</head>
+<body>
+<h1>neffos.js bundler example</h1>
+<div id="log"></div>
+<input id="message" placeholder="Type a message" autocomplete="off" />
+<button id="send">Send</button>
+<script type="module" src="bundle.js"></script>
+</body>
+</html>

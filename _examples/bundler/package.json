@@ -1,0 +1,14 @@
+{
+    "name": "neffos-bundler-example",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "esbuild app.js --bundle --format=esm --outfile=bundle.js"
+    },
+    "dependencies": {
+        "neffos.js": "file:../.."
+    },
+    "devDependencies": {
+        "esbuild": "^0.28.2"
+    }
+}
