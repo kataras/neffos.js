@@ -1,6 +1,6 @@
 {
     "name": "neffos.js",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "description": "TypeScript client for the neffos real-time WebSocket framework (Go): namespaces, rooms, request/response, binary messages and reconnect, for browsers, Node 22+, Deno and Bun",
     "keywords": [
         "neffos",
