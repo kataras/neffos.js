@@ -7,7 +7,7 @@
 
 It runs in browsers, in Node 22 and newer, in Deno and Bun, in web workers, and inside bundlers such as esbuild, webpack and Vite. Code samples are at [_examples/](_examples).
 
-[![npm version](https://img.shields.io/npm/v/neffos.js.svg?style=for-the-badge)](https://www.npmjs.com/package/neffos.js) [![chat](https://img.shields.io/gitter/room/neffos-framework/community.svg?color=blue&logo=gitter&style=for-the-badge)](https://gitter.im/neffos-framework/community) [![backend pkg](https://img.shields.io/badge/server%20-package-488AC7.svg?style=for-the-badge)](https://github.com/kataras/neffos)
+[![npm version](https://img.shields.io/npm/v/neffos.js.svg?style=for-the-badge)](https://www.npmjs.com/package/neffos.js) [![build status](https://img.shields.io/github/actions/workflow/status/kataras/neffos.js/ci.yml?branch=main&style=for-the-badge)](https://github.com/kataras/neffos.js/actions/workflows/ci.yml) [![backend pkg](https://img.shields.io/badge/server%20-package-488AC7.svg?style=for-the-badge)](https://github.com/kataras/neffos)
 
 ## Installation
 
@@ -28,6 +28,21 @@ const neffos = require("neffos.js");
 ```
 
 Types are bundled with the package. No separate `@types/*` install is needed.
+
+### Deno and Bun
+
+```ts
+// Deno: the npm specifier, no install step.
+import * as neffos from "npm:neffos.js";
+```
+
+```sh
+bun add neffos.js   # then import it like any ESM package
+```
+
+### What the package ships
+
+The `exports` map serves one build per condition: `dist/neffos.js` (ESM) for `import`, `dist/neffos.cjs` for `require`, `dist/neffos.browser.js` when a bundler resolves the `browser` condition, and the two script-tag builds as subpaths, `neffos.js/global` and `neffos.js/global.min`. Every build has a source map, the package is marked `sideEffects: false` so a bundler can tree-shake what you do not call, and the types in `dist/neffos.d.ts` are generated from the TypeScript source, so they cannot drift from it.
 
 ### Browser via CDN, as a global
 
@@ -63,6 +78,12 @@ Node 20 is not supported. `engines.node` in package.json requires `>=22`. The
 `ws` package is an optional peer dependency: install it only if you want real
 headers, or if you are on a Node version without a global `WebSocket`.
 
+A header sent as a URL parameter lands in the server's access log and in any
+proxy between. Put a short-lived token there, not a long-lived credential, or
+run the handshake through `ws` on the server-to-server side where real headers
+are available. On the Go side `neffos.URLParamAsHeaderPrefix` is the prefix
+the server strips.
+
 ## Quick start
 
 ```ts
@@ -70,10 +91,10 @@ import * as neffos from "neffos.js";
 
 const conn = await neffos.dial("ws://localhost:8080/echo", {
   default: {
-    async _OnNamespaceConnected(ns, msg) {
+    [neffos.OnNamespaceConnected](ns, msg) {
       console.log("connected to namespace:", msg.Namespace);
     },
-    _OnNamespaceDisconnect(ns, msg) {
+    [neffos.OnNamespaceDisconnect](ns, msg) {
       console.log("disconnected:", msg.Namespace);
     },
     async chat(ns, msg) {
@@ -86,9 +107,41 @@ const ns = await conn.connect("default");
 ns.emit("chat", "Hello from the client!");
 ```
 
+The system events are exported as constants (`OnNamespaceConnect`,
+`OnNamespaceConnected`, `OnNamespaceDisconnect`, `OnRoomJoin`, `OnRoomJoined`,
+`OnRoomLeave`, `OnRoomLeft`, `OnAnyEvent`, `OnNativeMessage`), so a typo is a
+compile error instead of a handler that never fires. The string form,
+`_OnNamespaceConnected`, still works.
+
 Handlers may be synchronous or `async`. A handler can return nothing, an
 `Error` (sent back to the server as the event's error), or throw; a thrown
 error is caught and sent back the same way.
+
+### Structured payloads, and the Go side
+
+`marshal(obj)` turns a value into a JSON body and `msg.unmarshal<T>()` reads one back. The matching Go server side is `c.SendObject(event, v)` to send and `msg.As[T]()` to read, with `neffos.ReplyObject(v)` for a typed reply to `ask`:
+
+```ts
+interface Profile { id: number; name: string; tags: string[] }
+
+ns.emit("save", neffos.marshal({ id: 42, name: "makis", tags: [] }));
+
+const reply = await ns.ask("profile", neffos.marshal({ id: 42 }));
+const profile = reply.unmarshal<Profile>();
+```
+
+```go
+// the Go handler behind "profile", neffos v0.0.25
+"profile": func(c *neffos.NSConn, msg neffos.Message) error {
+	req, err := msg.As[ProfileRequest]()
+	if err != nil {
+		return err
+	}
+	return neffos.ReplyObject(profiles.Load(req.ID))
+},
+```
+
+The server encodes with Go's `encoding/json/v2`, so an empty Go slice arrives as `[]` and an empty map as `{}`; a `null` only shows up for a nil pointer. Field names match case-insensitively on the Go side, so `{"Name": ...}` and `{"name": ...}` both bind.
 
 A matching neffos Go server for this client lives at [kataras/neffos/_examples/01-getting-started](https://github.com/kataras/neffos/tree/main/_examples/01-getting-started), and a full example tree including the server is at [_examples/](_examples).
 
@@ -183,8 +236,13 @@ const conn = await neffos.dial(endpoint, handlers, {
 
 A number is shorthand for `{ initialDelay: <number> }`; `0` turns reconnect
 off. The delay grows by `factor` each retry (default 2), capped at `maxDelay`
-(default 30000 ms), with up to 20% shaved off at random so that many clients
-do not all retry in the same instant. `maxRetries` is unlimited by default.
+(default 30000 ms), with up to `jitter` (default 0.2, so 20%) shaved off at
+random so that many clients do not all retry in the same instant.
+`maxRetries` is unlimited by default. `shouldReconnect(info)` gets the close
+code, reason and `wasClean` flag of each drop and can veto the retry, for
+example after a `4003` your server uses for "banned". `probe: true` sends an
+HTTP `HEAD` to the endpoint before each retry and only redials once it
+answers, which is what 0.2.0 always did; it is off by default.
 
 The same `Conn` is reused after a reconnect: `conn.isClosed()` stays `false`,
 and application references to a connected `NSConn` or a joined `Room` keep
@@ -201,7 +259,7 @@ reconnecting.
 | `Message` | one frame: `Namespace`, `Room`, `Event`, `Body`, `Err`, plus `text()`, `bytes()` and `unmarshal<T>()` |
 | `Room` | a joined room: `emit`, `emitBinary`, `leave()` |
 | `NSConn` | a connected namespace: `emit`, `emitBinary`, `ask`, `joinRoom`, `room`, `roomNames`, `leaveAll`, `disconnect` |
-| `Conn` | the connection itself: `connect`, `ask`, `write`, `close`, `isClosed`, `wasReconnected` |
+| `Conn` | the connection itself: `connect`, `waitServerConnect`, `namespace`, `ask`, `write`, `close`, `isClosed`, `wasReconnected`, `reconnectTries`, `closeInfo`, `ID` |
 | `NeffosError` | the base class of every error this library creates, with a `code` |
 | `CloseError` | a `NeffosError` that closed, or asked to close, the connection, with `closeCode` and `cause` |
 | `dial(endpoint, connHandler, options?)` | opens a connection and resolves with a `Conn` |
@@ -210,6 +268,11 @@ reconnecting.
 | `isCloseError(err)` | true if `err` came from a server shutdown or a forced close |
 | `registerKnownError(err)` | shares a custom error so both sides resolve the same instance |
 | `isSystemEvent(event)` | true for the built-in connect, disconnect and room events |
+| `OnNamespaceConnect` ... `OnNativeMessage` | the nine system event names, for use as handler keys |
+| `ErrInvalidPayload`, `ErrBadNamespace`, `ErrBadRoom`, `ErrClosed`, `ErrWrite` | the shared sentinels, the same instances the wire resolves to |
+| `ReplyError` | what `reply(body)` returns; a handler that returns it sends `body` back as a normal message |
+| `URLParamAsHeaderPrefix` | `X-Websocket-Header-`, the prefix headers get when they travel as URL parameters |
+| types | `Options`, `ReconnectOptions`, `AskOptions`, `CloseInfo`, `Namespaces`, `Events`, `MessageHandlerFunc`, `ConnHandler`, `WSData`, `Headers`, `WebSocketLike`, `WebSocketConstructor`, `ErrorResolver` |
 
 See [HISTORY.md](HISTORY.md) for every release, including what changed and why.
 

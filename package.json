@@ -1,13 +1,20 @@
 {
     "name": "neffos.js",
     "version": "0.2.0",
-    "description": "javascript client for the modern neffos websocket framework",
+    "description": "TypeScript client for the neffos real-time WebSocket framework (Go): namespaces, rooms, request/response, binary messages and reconnect, for browsers, Node 22+, Deno and Bun",
     "keywords": [
         "neffos",
-        "realtime",
-        "framework",
         "websocket",
+        "realtime",
+        "real-time",
+        "typescript",
+        "esm",
+        "browser",
+        "nodejs",
+        "deno",
+        "bun",
         "events",
+        "rooms",
         "iris",
         "iris web framework"
     ],
@@ -79,7 +86,7 @@
     "license": "MIT",
     "repository": {
         "type": "git",
-        "url": "git://github.com/kataras/neffos.js"
+        "url": "git+https://github.com/kataras/neffos.js.git"
     },
     "bugs": {
         "url": "https://github.com/kataras/neffos.js/issues"
@@ -90,5 +97,6 @@
             "name": "Gerasimos Maropoulos (@kataras)",
             "email": "kataras2006@hotmail.com"
         }
-    ]
+    ],
+    "homepage": "https://github.com/kataras/neffos.js#readme"
 }

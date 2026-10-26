@@ -9,7 +9,7 @@
 
   Run it: `cd ../server && go run .`, then open http://localhost:8080.
   The script below loads the library from /dist/ (served locally by that
-  Go server) because neffos.js 0.3.0 is not published yet; once it is,
+  Go server) so it runs against this checkout's build; in your own page,
   swap the <script src="/dist/..."> line below for the commented jsdelivr
   one further down.
 
@@ -36,7 +36,7 @@
 </form>
 
 <script src="/dist/neffos.global.min.js"></script>
-<!-- Once 0.3.0 is published, use the CDN build instead of the local one above:
+<!-- In your own page, use the CDN build instead of the local one above:
 <script src="https://cdn.jsdelivr.net/npm/neffos.js@0.3/dist/neffos.global.min.js"></script>
 -->
 <script>

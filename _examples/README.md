@@ -4,10 +4,11 @@ Four runnable programs: one Go server and three ways to talk to it from the
 client side. Every example file opens with a comment saying what it shows,
 how to run it, what to try, and which example to read next.
 
-Requirements: Go 1.26 or newer for the server, Node 22 or newer for the Node
-example. The client examples load the client library from the repo's local
-`dist/` build, because neffos.js 0.3.0 is not published yet; each one has a
-commented line showing the npm or CDN form to switch to once it is.
+Requirements: Go 1.27 or newer for the server (it builds against neffos
+v0.0.25), Node 22 or newer for the Node example. The client examples load the
+client library from the repo's local `dist/` build, so they run against the
+code in this checkout; each one has a commented line showing the npm or CDN
+form to use in your own project.
 
 ## Running the server
 

@@ -12,7 +12,7 @@
 // Read next: ../browser/index.html for the same chat in a page, or
 // ../bundler/ for a build-tool setup.
 
-// This import is relative because neffos.js 0.3.0 is not published yet.
+// This import is relative so the example runs against this checkout's build.
 // Once it is, this becomes: import * as neffos from 'neffos.js';
 // CommonJS projects would instead write: const neffos = require('neffos.js');
 import * as neffos from '../../dist/neffos.js';

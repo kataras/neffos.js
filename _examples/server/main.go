@@ -7,8 +7,8 @@
 // serves the neffos websocket endpoint at /ws, the browser example at /,
 // the bundler example at /bundler/ (browsers block its module script when
 // the page is opened as a file), and the locally built client library at
-// /dist/ (so ../browser/index.html can load it before neffos.js 0.3.0 is
-// published to npm).
+// /dist/ (so ../browser/index.html runs against this checkout's build rather
+// than the published package).
 //
 // Try it: open http://localhost:8080 in two browser tabs and chat between
 // them, or run `node ../node/client.mjs` alongside a browser tab.
