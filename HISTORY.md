@@ -76,6 +76,11 @@
 - `ws` as a direct dependency. It is now an optional peer dependency.
 - `pnpm-lock.yaml`, `.travis.yml` and `.npmignore`. `package-lock.json` is tracked instead, and CI moved to GitHub Actions (`.github/workflows/ci.yml`).
 
+### Pairing with the Go server
+
+- 0.3.0 pairs with neffos (Go) v0.0.25, the first server release built on Go 1.27, and still speaks to every earlier v0.0.x server: the wire protocol did not change. The integration test suite now builds its Go server against v0.0.25 (`tests/integration/testserver/go.mod`), as does `_examples/server`.
+- A v0.0.25 server encodes message bodies with Go's `encoding/json/v2`. `msg.unmarshal()` is plain `JSON.parse` and is unaffected, but application code that tested a decoded field for `null` should know that an empty Go slice now arrives as `[]` and an empty map as `{}`.
+
 ## 0.2.0 (2026-05-28)
 
 ### Breaking changes

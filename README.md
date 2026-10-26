@@ -1,4 +1,7 @@
-<img src="gh_logo_js.png" />
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="gh_logo_js_dark.png">
+  <img src="gh_logo_js.png" alt="neffos.js: real-time client for the web" width="536">
+</picture>
 
 `neffos.js` is the official client library for the [neffos](https://github.com/kataras/neffos) real-time WebSocket framework, written in TypeScript and shipped with full type definitions.
 
@@ -215,6 +218,6 @@ See [HISTORY.md](HISTORY.md) for every release, including what changed and why.
 [![npm version](https://img.shields.io/npm/v/neffos.js.svg?style=flat-square)](https://www.npmjs.com/package/neffos.js)
 
 `neffos.js` follows [Semantic Versioning 2.0.0](http://semver.org/). neffos.js
-0.3.x speaks the same wire protocol as neffos (Go) v0.0.x and v0.1.x: any of
-those server versions works with this client, and the client's own version
-does not need to track the server's.
+0.3.x speaks the same wire protocol as every neffos (Go) v0.0.x server, v0.0.25
+included: any of those server versions works with this client, and the client's
+own version does not need to track the server's.

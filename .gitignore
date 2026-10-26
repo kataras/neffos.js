@@ -2,3 +2,8 @@
 node_modules
 dist/
 coverage/
+.plexon
+.claude
+CLAUDE.md
+AGENTS.md
+PLEXON.md
